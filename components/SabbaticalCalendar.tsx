@@ -729,9 +729,16 @@ export default function SabbaticalCalendar() {
                   <input
                     type="date"
                     value={tripForm.startDate}
-                    onChange={(e) =>
-                      setTripForm((f) => ({ ...f, startDate: e.target.value }))
-                    }
+                    min="2026-08-01"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setTripForm((f) => ({
+                        ...f,
+                        startDate: val,
+                        // Auto-advance "Back on" if empty or before new start
+                        endDate: !f.endDate || f.endDate < val ? val : f.endDate,
+                      }));
+                    }}
                     className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
                   />
                 </div>
@@ -742,6 +749,7 @@ export default function SabbaticalCalendar() {
                   <input
                     type="date"
                     value={tripForm.endDate}
+                    min={tripForm.startDate || "2026-08-01"}
                     onChange={(e) =>
                       setTripForm((f) => ({ ...f, endDate: e.target.value }))
                     }
