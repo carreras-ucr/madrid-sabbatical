@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { Trip } from "@/lib/types";
+import type { Trip, Visit } from "@/lib/types";
 import { TRIP_COLORS } from "@/lib/constants";
 
 interface MonthTripSummaryProps {
   trips: Trip[];
+  visits: Visit[];
   defaultExpanded: boolean;
   onTripClick: (tripId: string) => void;
+  onVisitClick: (visitId: string) => void;
 }
 
 const fmtDate = (s: string) => {
@@ -18,12 +20,15 @@ const fmtDate = (s: string) => {
 
 export default function MonthTripSummary({
   trips,
+  visits,
   defaultExpanded,
   onTripClick,
+  onVisitClick,
 }: MonthTripSummaryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const total = trips.length + visits.length;
 
-  if (trips.length === 0) return null;
+  if (total === 0) return null;
 
   return (
     <div className="mt-1.5 mb-2">
@@ -34,7 +39,7 @@ export default function MonthTripSummary({
         <span className={`transition-transform ${expanded ? "rotate-90" : ""}`}>
           ›
         </span>
-        Trips this month ({trips.length})
+        This month ({total})
       </button>
       {expanded && (
         <div className="mt-1 flex flex-col gap-1">
@@ -50,14 +55,32 @@ export default function MonthTripSummary({
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ background: c }}
                 />
-                <span
-                  className="text-[11px] font-bold"
-                  style={{ color: c }}
-                >
-                  {trip.destination}
+                <span className="text-[11px] font-bold" style={{ color: c }}>
+                  📍 {trip.destination}
                 </span>
                 <span className="text-[10px] text-gray-400">
                   {fmtDate(trip.startDate)} – {fmtDate(trip.endDate)}
+                </span>
+              </div>
+            );
+          })}
+          {visits.map((visit) => {
+            const c = TRIP_COLORS[visit.color % TRIP_COLORS.length];
+            return (
+              <div
+                key={visit.id}
+                onClick={() => onVisitClick(visit.id)}
+                className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-slate-50 transition-colors"
+              >
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: c }}
+                />
+                <span className="text-[11px] font-bold" style={{ color: c }}>
+                  👋 {visit.visitorName}
+                </span>
+                <span className="text-[10px] text-gray-400">
+                  {fmtDate(visit.startDate)} – {fmtDate(visit.endDate)}
                 </span>
               </div>
             );

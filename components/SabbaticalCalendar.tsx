@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MONTHS, TRIP_COLORS, ITEM_ICONS, ITEM_LABELS } from "@/lib/constants";
 import { SCHOOL_EVENTS } from "@/lib/schoolEvents";
-import type { Trip, TripItem } from "@/lib/types";
+import type { Trip, TripItem, Visit } from "@/lib/types";
 import CalendarMonth from "./CalendarMonth";
 
 const dk = (y: number, m: number, d: number) =>
@@ -39,7 +39,15 @@ interface ItemFormData {
   checkOutTime: string;
 }
 
-type ViewType = "calendar" | "trips" | "tripDetail";
+interface VisitFormData {
+  visitorName: string;
+  startDate: string;
+  endDate: string;
+  notes: string;
+  color: number;
+}
+
+type ViewType = "calendar" | "trips" | "tripDetail" | "visits" | "visitDetail";
 
 export default function SabbaticalCalendar() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -72,12 +80,29 @@ export default function SabbaticalCalendar() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [calendarMode, setCalendarMode] = useState<"all" | "trips">("all");
 
-  // Load trips from API
+  // Visit state
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [showVisitForm, setShowVisitForm] = useState(false);
+  const [editVisitId, setEditVisitId] = useState<string | null>(null);
+  const [visitForm, setVisitForm] = useState<VisitFormData>({
+    visitorName: "",
+    startDate: "",
+    endDate: "",
+    notes: "",
+    color: 0,
+  });
+  const [detailVisitId, setDetailVisitId] = useState<string | null>(null);
+  const [confirmDeleteVisit, setConfirmDeleteVisit] = useState<string | null>(null);
+
+  // Load trips and visits from API
   useEffect(() => {
-    fetch("/api/trips")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTrips(data);
+    Promise.all([
+      fetch("/api/trips").then((r) => r.json()),
+      fetch("/api/visits").then((r) => r.json()),
+    ])
+      .then(([tripsData, visitsData]) => {
+        if (Array.isArray(tripsData)) setTrips(tripsData);
+        if (Array.isArray(visitsData)) setVisits(visitsData);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -96,6 +121,19 @@ export default function SabbaticalCalendar() {
     []
   );
 
+  // Save visits to API after mutations
+  const saveVisits = useCallback(
+    (newVisits: Visit[]) => {
+      setVisits(newVisits);
+      fetch("/api/visits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newVisits),
+      }).catch(() => {});
+    },
+    []
+  );
+
   // Build trips-by-date index
   const tripsByDate: Record<string, Trip[]> = {};
   trips.forEach((trip) => {
@@ -105,6 +143,19 @@ export default function SabbaticalCalendar() {
       const k = c.toISOString().slice(0, 10);
       if (!tripsByDate[k]) tripsByDate[k] = [];
       tripsByDate[k].push(trip);
+      c.setDate(c.getDate() + 1);
+    }
+  });
+
+  // Build visits-by-date index
+  const visitsByDate: Record<string, Visit[]> = {};
+  visits.forEach((visit) => {
+    const c = new Date(visit.startDate + "T00:00:00");
+    const e = new Date(visit.endDate + "T00:00:00");
+    while (c <= e) {
+      const k = c.toISOString().slice(0, 10);
+      if (!visitsByDate[k]) visitsByDate[k] = [];
+      visitsByDate[k].push(visit);
       c.setDate(c.getDate() + 1);
     }
   });
@@ -213,8 +264,56 @@ export default function SabbaticalCalendar() {
     setShowItemForm(true);
   };
 
+  // Visit CRUD
+  const saveVisit = () => {
+    if (!visitForm.visitorName || !visitForm.startDate || !visitForm.endDate) return;
+    let newVisits: Visit[];
+    if (editVisitId) {
+      newVisits = visits.map((v) =>
+        v.id === editVisitId ? { ...v, ...visitForm } : v
+      );
+    } else {
+      newVisits = [...visits, { ...visitForm, id: gid() }];
+    }
+    saveVisits(newVisits);
+    setShowVisitForm(false);
+    setEditVisitId(null);
+    setVisitForm({
+      visitorName: "",
+      startDate: "",
+      endDate: "",
+      notes: "",
+      color: newVisits.length % TRIP_COLORS.length,
+    });
+  };
+
+  const deleteVisit = (id: string) => {
+    saveVisits(visits.filter((v) => v.id !== id));
+    if (detailVisitId === id) {
+      setDetailVisitId(null);
+      setView("visits");
+    }
+    setConfirmDeleteVisit(null);
+  };
+
+  const openEditVisit = (visit: Visit) => {
+    setVisitForm({
+      visitorName: visit.visitorName,
+      startDate: visit.startDate,
+      endDate: visit.endDate,
+      notes: visit.notes || "",
+      color: visit.color,
+    });
+    setEditVisitId(visit.id);
+    setShowVisitForm(true);
+  };
+
   const detailTrip = trips.find((t) => t.id === detailTripId);
   const sortedTrips = [...trips].sort((a, b) =>
+    a.startDate.localeCompare(b.startDate)
+  );
+  const detailVisit = visits.find((v) => v.id === detailVisitId);
+  const sortedVisits = [...visits].sort((a, b) =>
     a.startDate.localeCompare(b.startDate)
   );
 
@@ -232,6 +331,91 @@ export default function SabbaticalCalendar() {
     setSelectedDate(null);
   };
 
+  const handleVisitClick = (visitId: string) => {
+    setDetailVisitId(visitId);
+    setView("visitDetail");
+    setSelectedDate(null);
+  };
+
+  // Visits list view
+  const renderVisitsList = () => (
+    <div>
+      {sortedVisits.length === 0 ? (
+        <p className="text-center text-gray-400 py-10">
+          No visits yet. Tap &quot;+ Add Visit&quot; to track who&apos;s coming!
+        </p>
+      ) : (
+        sortedVisits.map((visit) => {
+          const c = TRIP_COLORS[visit.color % TRIP_COLORS.length];
+          return (
+            <div
+              key={visit.id}
+              className="flex items-center gap-3 p-3 mb-2 rounded-xl border"
+              style={{ borderColor: c + "33", background: c + "08" }}
+            >
+              <div
+                onClick={() => handleVisitClick(visit.id)}
+                className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+              >
+                <div className="w-1.5 h-10 rounded-sm shrink-0" style={{ background: c }} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm text-slate-800">👋 {visit.visitorName}</div>
+                  <div className="text-xs text-gray-500">
+                    {fmtDate(visit.startDate)} – {fmtDate(visit.endDate)}
+                  </div>
+                </div>
+                <div className="text-base text-gray-300 shrink-0">›</div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteVisit(visit.id); }}
+                className="bg-transparent border-none cursor-pointer text-base p-1.5 shrink-0 text-slate-400"
+              >
+                🗑️
+              </button>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+
+  // Visit detail view
+  const renderVisitDetail = () => {
+    if (!detailVisit) return <p className="text-gray-400 p-5">Visit not found.</p>;
+    const c = TRIP_COLORS[detailVisit.color % TRIP_COLORS.length];
+    return (
+      <div>
+        <div className="p-4 rounded-xl mb-4 border" style={{ background: c + "11", borderColor: c + "33" }}>
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-xl font-extrabold" style={{ color: c }}>👋 {detailVisit.visitorName}</h2>
+              <div className="text-[13px] text-gray-500 mt-1">
+                {fmtDate(detailVisit.startDate)} – {fmtDate(detailVisit.endDate)}
+              </div>
+              {detailVisit.notes && (
+                <div className="text-xs text-gray-500 mt-1 italic">{detailVisit.notes}</div>
+              )}
+            </div>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => openEditVisit(detailVisit)}
+                className="bg-white border border-gray-300 rounded-md px-2.5 py-1 text-xs cursor-pointer"
+              >
+                ✏️ Edit
+              </button>
+              <button
+                onClick={() => setConfirmDeleteVisit(detailVisit.id)}
+                className="bg-white border border-red-300 rounded-md px-2.5 py-1 text-xs cursor-pointer text-red-600"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Calendar view
   const renderCalendar = () => (
     <>
@@ -245,9 +429,12 @@ export default function SabbaticalCalendar() {
             calendarMode={calendarMode}
             tripsByDate={tripsByDate}
             trips={trips}
+            visitsByDate={visitsByDate}
+            visits={visits}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             onTripClick={handleTripClick}
+            onVisitClick={handleVisitClick}
           />
         ))}
       </div>
@@ -304,7 +491,31 @@ export default function SabbaticalCalendar() {
                 </div>
               );
             })}
-            {!sch && dt.length === 0 && (
+            {(visitsByDate[selectedDate] || []).map((visit) => {
+              const c = TRIP_COLORS[visit.color % TRIP_COLORS.length];
+              return (
+                <div
+                  key={visit.id}
+                  className="p-2 rounded-lg mb-1.5 cursor-pointer border"
+                  style={{
+                    background: c + "11",
+                    borderColor: c + "33",
+                  }}
+                  onClick={() => handleVisitClick(visit.id)}
+                >
+                  <strong style={{ color: c }}>
+                    👋 {visit.visitorName}
+                  </strong>
+                  <span className="text-[11px] text-gray-500 ml-1.5">
+                    {fmtDate(visit.startDate)} – {fmtDate(visit.endDate)}
+                  </span>
+                  <div className="text-[11px] text-gray-500 mt-0.5">
+                    Visiting · Tap to view →
+                  </div>
+                </div>
+              );
+            })}
+            {!sch && dt.length === 0 && (visitsByDate[selectedDate] || []).length === 0 && (
               <p className="text-xs text-gray-400">No events this day.</p>
             )}
           </div>
@@ -573,22 +784,40 @@ export default function SabbaticalCalendar() {
             2026–2027 · School calendar + travel planner
           </p>
         </div>
-        <button
-          onClick={() => {
-            setTripForm({
-              destination: "",
-              startDate: "",
-              endDate: "",
-              notes: "",
-              color: trips.length % TRIP_COLORS.length,
-            });
-            setEditTripId(null);
-            setShowTripForm(true);
-          }}
-          className="bg-indigo-600 text-white border-none rounded-lg px-3.5 py-2 font-semibold text-[13px] cursor-pointer hover:bg-indigo-700 transition-colors"
-        >
-          + Add Trip
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setTripForm({
+                destination: "",
+                startDate: "",
+                endDate: "",
+                notes: "",
+                color: trips.length % TRIP_COLORS.length,
+              });
+              setEditTripId(null);
+              setShowTripForm(true);
+            }}
+            className="bg-indigo-600 text-white border-none rounded-lg px-3.5 py-2 font-semibold text-[13px] cursor-pointer hover:bg-indigo-700 transition-colors"
+          >
+            + Add Trip
+          </button>
+          <button
+            onClick={() => {
+              setVisitForm({
+                visitorName: "",
+                startDate: "",
+                endDate: "",
+                notes: "",
+                color: visits.length % TRIP_COLORS.length,
+              });
+              setEditVisitId(null);
+              setShowVisitForm(true);
+            }}
+            className="bg-emerald-600 text-white border-none rounded-lg px-3.5 py-2 font-semibold text-[13px] cursor-pointer hover:bg-emerald-700 transition-colors"
+          >
+            + Add Visit
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -597,16 +826,17 @@ export default function SabbaticalCalendar() {
           [
             ["calendar", "📅 Calendar"],
             ["trips", `📋 Trips (${trips.length})`],
+            ["visits", `👋 Visits (${visits.length})`],
           ] as const
         ).map(([k, label]) => (
           <button
             key={k}
             onClick={() => {
-              setView(k);
+              setView(k as ViewType);
               setSelectedDate(null);
             }}
             className={`px-3.5 py-2 text-[13px] bg-transparent border-none cursor-pointer -mb-[2px] ${
-              view === k || (view === "tripDetail" && k === "trips")
+              view === k || (view === "tripDetail" && k === "trips") || (view === "visitDetail" && k === "visits")
                 ? "font-bold text-indigo-600 border-b-2 border-indigo-600"
                 : "font-medium text-slate-500"
             }`}
@@ -616,13 +846,21 @@ export default function SabbaticalCalendar() {
         ))}
       </div>
 
-      {/* Back button for trip detail */}
+      {/* Back buttons */}
       {view === "tripDetail" && (
         <button
           onClick={() => setView("trips")}
           className="bg-transparent border-none cursor-pointer text-[13px] text-indigo-600 font-semibold py-1 mb-2"
         >
           ← All Trips
+        </button>
+      )}
+      {view === "visitDetail" && (
+        <button
+          onClick={() => setView("visits")}
+          className="bg-transparent border-none cursor-pointer text-[13px] text-indigo-600 font-semibold py-1 mb-2"
+        >
+          ← All Visits
         </button>
       )}
 
@@ -674,10 +912,8 @@ export default function SabbaticalCalendar() {
                 <span className="w-2.5 h-2.5 rounded-sm bg-orange-50 border border-orange-200" />{" "}
                 Vacation
               </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-300" />{" "}
-                Trip
-              </span>
+              <span className="flex items-center gap-1">📍 Trip</span>
+              <span className="flex items-center gap-1">👋 Visit</span>
             </div>
           ) : (
             <div className="flex gap-2.5 flex-wrap text-[11px] text-slate-500">
@@ -691,6 +927,8 @@ export default function SabbaticalCalendar() {
       {view === "calendar" && renderCalendar()}
       {view === "trips" && renderTripsList()}
       {view === "tripDetail" && renderTripDetail()}
+      {view === "visits" && renderVisitsList()}
+      {view === "visitDetail" && renderVisitDetail()}
 
       {/* Trip Form Modal */}
       {showTripForm && (
@@ -1043,6 +1281,156 @@ export default function SabbaticalCalendar() {
                   </button>
                   <button
                     onClick={() => deleteTrip(confirmDelete)}
+                    className="flex-1 bg-red-600 text-white border-none rounded-lg py-2.5 font-bold text-sm cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+      {/* Visit Form Modal */}
+      {showVisitForm && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200] p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowVisitForm(false);
+              setEditVisitId(null);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl p-5 w-full max-w-[400px] max-h-[85vh] overflow-y-auto">
+            <h3 className="text-[17px] font-bold mb-3.5">
+              {editVisitId ? "Edit" : "New"} Visit
+            </h3>
+            <div className="flex flex-col gap-2.5">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                  Visitor Name *
+                </label>
+                <input
+                  value={visitForm.visitorName}
+                  onChange={(e) =>
+                    setVisitForm((f) => ({ ...f, visitorName: e.target.value }))
+                  }
+                  placeholder="e.g. Mom & Dad, The Smiths, Uncle Jorge…"
+                  className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                    Arriving *
+                  </label>
+                  <input
+                    type="date"
+                    value={visitForm.startDate}
+                    min="2026-08-01"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setVisitForm((f) => ({
+                        ...f,
+                        startDate: val,
+                        endDate: !f.endDate || f.endDate < val ? val : f.endDate,
+                      }));
+                    }}
+                    className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                    Departing *
+                  </label>
+                  <input
+                    type="date"
+                    value={visitForm.endDate}
+                    min={visitForm.startDate || "2026-08-01"}
+                    onChange={(e) =>
+                      setVisitForm((f) => ({ ...f, endDate: e.target.value }))
+                    }
+                    className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                  Color
+                </label>
+                <div className="flex gap-1.5">
+                  {TRIP_COLORS.map((color, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setVisitForm((f) => ({ ...f, color: i }))}
+                      className={`w-6 h-6 rounded-full cursor-pointer ${
+                        visitForm.color === i
+                          ? "border-[3px] border-slate-800"
+                          : "border-2 border-transparent"
+                      }`}
+                      style={{ background: color, boxSizing: "border-box" }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                  Notes
+                </label>
+                <textarea
+                  value={visitForm.notes}
+                  onChange={(e) =>
+                    setVisitForm((f) => ({ ...f, notes: e.target.value }))
+                  }
+                  placeholder="Where they're staying, things to do…"
+                  rows={2}
+                  className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px] resize-y"
+                />
+              </div>
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={saveVisit}
+                  className="flex-1 bg-emerald-600 text-white border-none rounded-lg py-2.5 font-bold text-sm cursor-pointer hover:bg-emerald-700 transition-colors"
+                >
+                  {editVisitId ? "Update" : "Add Visit"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowVisitForm(false);
+                    setEditVisitId(null);
+                  }}
+                  className="flex-1 bg-slate-100 border-none rounded-lg py-2.5 font-semibold text-sm cursor-pointer text-slate-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Visit Delete Confirmation */}
+      {confirmDeleteVisit &&
+        (() => {
+          const v = visits.find((x) => x.id === confirmDeleteVisit);
+          return (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[300] p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] text-center">
+                <div className="text-[28px] mb-2">🗑️</div>
+                <h3 className="text-base font-bold mb-2">Delete visit?</h3>
+                <p className="text-[13px] text-gray-500 mb-4">
+                  Visit from &quot;{v?.visitorName}&quot; will be permanently removed.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmDeleteVisit(null)}
+                    className="flex-1 bg-slate-100 border-none rounded-lg py-2.5 font-semibold text-sm cursor-pointer text-slate-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteVisit(confirmDeleteVisit)}
                     className="flex-1 bg-red-600 text-white border-none rounded-lg py-2.5 font-bold text-sm cursor-pointer"
                   >
                     Delete

@@ -2,7 +2,7 @@
 
 import { WEEKDAYS, TRIP_COLORS } from "@/lib/constants";
 import { SCHOOL_EVENTS } from "@/lib/schoolEvents";
-import type { Trip } from "@/lib/types";
+import type { Trip, Visit } from "@/lib/types";
 import { getTripsForMonth } from "@/lib/tripLayout";
 import MonthTripSummary from "./MonthTripSummary";
 
@@ -13,9 +13,12 @@ interface CalendarMonthProps {
   calendarMode: "all" | "trips";
   tripsByDate: Record<string, Trip[]>;
   trips: Trip[];
+  visitsByDate: Record<string, Visit[]>;
+  visits: Visit[];
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
   onTripClick: (tripId: string) => void;
+  onVisitClick: (visitId: string) => void;
 }
 
 const dk = (y: number, m: number, d: number) =>
@@ -36,6 +39,13 @@ function schoolTextColor(type: string) {
   return "text-green-700";
 }
 
+function getVisitsForMonth(visits: Visit[], year: number, month: number): Visit[] {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthStart = dk(year, month, 1);
+  const monthEnd = dk(year, month, daysInMonth);
+  return visits.filter((v) => v.startDate <= monthEnd && v.endDate >= monthStart);
+}
+
 export default function CalendarMonth({
   year,
   month,
@@ -43,12 +53,16 @@ export default function CalendarMonth({
   calendarMode,
   tripsByDate,
   trips,
+  visitsByDate,
+  visits,
   selectedDate,
   onSelectDate,
   onTripClick,
+  onVisitClick,
 }: CalendarMonthProps) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthTrips = getTripsForMonth(trips, year, month);
+  const monthVisits = getVisitsForMonth(visits, year, month);
 
   const getStartDay = () => {
     const d = new Date(year, month, 1).getDay();
@@ -73,6 +87,7 @@ export default function CalendarMonth({
     const k = dk(year, month, d);
     const sch = SCHOOL_EVENTS[k];
     const dt = tripsByDate[k] || [];
+    const dv = visitsByDate[k] || [];
     const we = isWe(d);
     const ty = sch?.type;
 
@@ -82,14 +97,17 @@ export default function CalendarMonth({
       if (ty) bgClass = schoolBg(ty);
       else if (we) bgClass = "bg-gray-50";
     } else {
-      // Trips-only mode
       if (we) bgClass = "bg-gray-50";
     }
 
-    // In trips-only mode, check if day is part of any trip for tinting
+    // In trips-only mode, tint for trips or visits
+    const tintSource = dt.length > 0 ? dt[0] : null;
+    const visitTintSource = dv.length > 0 ? dv[0] : null;
     const tripTint =
-      calendarMode === "trips" && dt.length > 0
-        ? TRIP_COLORS[dt[0].color % TRIP_COLORS.length] + "12"
+      calendarMode === "trips" && (tintSource || visitTintSource)
+        ? TRIP_COLORS[
+            ((tintSource?.color ?? visitTintSource?.color ?? 0) % TRIP_COLORS.length)
+          ] + "12"
         : undefined;
 
     cells.push(
@@ -120,20 +138,31 @@ export default function CalendarMonth({
             {sch.label}
           </div>
         )}
-        {/* Trip pin badges in "all" mode */}
-        {calendarMode === "all" && dt.length > 0 && (
+        {/* Badges in "all" mode */}
+        {calendarMode === "all" && (dt.length > 0 || dv.length > 0) && (
           <div className="flex gap-0.5 mt-0.5 flex-wrap">
             {dt.slice(0, 2).map((t, i) => (
               <div
-                key={i}
+                key={`t${i}`}
                 className="text-[8px] px-1 rounded truncate max-w-full font-bold"
                 style={{
-                  background:
-                    TRIP_COLORS[t.color % TRIP_COLORS.length] + "22",
+                  background: TRIP_COLORS[t.color % TRIP_COLORS.length] + "22",
                   color: TRIP_COLORS[t.color % TRIP_COLORS.length],
                 }}
               >
                 📍{t.destination.slice(0, 10)}
+              </div>
+            ))}
+            {dv.slice(0, 2).map((v, i) => (
+              <div
+                key={`v${i}`}
+                className="text-[8px] px-1 rounded truncate max-w-full font-bold"
+                style={{
+                  background: TRIP_COLORS[v.color % TRIP_COLORS.length] + "22",
+                  color: TRIP_COLORS[v.color % TRIP_COLORS.length],
+                }}
+              >
+                👋{v.visitorName.slice(0, 10)}
               </div>
             ))}
           </div>
@@ -161,11 +190,13 @@ export default function CalendarMonth({
       {/* Day grid */}
       <div className="grid grid-cols-7 gap-0.5">{cells}</div>
 
-      {/* Monthly trip summary */}
+      {/* Monthly summary */}
       <MonthTripSummary
         trips={monthTrips}
+        visits={monthVisits}
         defaultExpanded={calendarMode === "trips"}
         onTripClick={onTripClick}
+        onVisitClick={onVisitClick}
       />
     </div>
   );

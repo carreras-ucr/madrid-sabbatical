@@ -20,3 +20,12 @@ export interface Trip {
   color: number;
   items: TripItem[];
 }
+
+export interface Visit {
+  id: string;
+  visitorName: string;
+  startDate: string;
+  endDate: string;
+  notes: string;
+  color: number;
+}
