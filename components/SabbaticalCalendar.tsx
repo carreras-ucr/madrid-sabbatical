@@ -34,6 +34,9 @@ interface ItemFormData {
   details: string;
   refNumber: string;
   direction: "outbound" | "return";
+  hotelName: string;
+  checkInTime: string;
+  checkOutTime: string;
 }
 
 type ViewType = "calendar" | "trips" | "tripDetail";
@@ -60,6 +63,9 @@ export default function SabbaticalCalendar() {
     details: "",
     refNumber: "",
     direction: "outbound",
+    hotelName: "",
+    checkInTime: "",
+    checkOutTime: "",
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -174,6 +180,9 @@ export default function SabbaticalCalendar() {
       details: "",
       refNumber: "",
       direction: "outbound",
+      hotelName: "",
+      checkInTime: "",
+      checkOutTime: "",
     });
     setShowItemForm(false);
     setEditItemId(null);
@@ -196,6 +205,9 @@ export default function SabbaticalCalendar() {
       details: item.details,
       refNumber: item.refNumber,
       direction: item.direction || "outbound",
+      hotelName: item.hotelName || "",
+      checkInTime: item.checkInTime || "",
+      checkOutTime: item.checkOutTime || "",
     });
     setEditItemId(item.id);
     setShowItemForm(true);
@@ -438,6 +450,9 @@ export default function SabbaticalCalendar() {
                     details: "",
                     refNumber: "",
                     direction: "outbound",
+                    hotelName: "",
+                    checkInTime: "",
+                    checkOutTime: "",
                   });
                   setEditItemId(null);
                   setShowItemForm(true);
@@ -484,8 +499,13 @@ export default function SabbaticalCalendar() {
                             : "→ Outbound"}
                         </span>
                       )}
+                      {item.type === "hotel" && item.hotelName && (
+                        <strong className="mr-1.5">{item.hotelName}</strong>
+                      )}
                       {item.refNumber && (
-                        <strong className="mr-1.5">{item.refNumber}</strong>
+                        <strong className={`mr-1.5 ${item.type === "hotel" && item.hotelName ? "font-normal text-gray-500" : ""}`}>
+                          {item.type === "hotel" && item.hotelName ? `(${item.refNumber})` : item.refNumber}
+                        </strong>
                       )}
                       {item.details && (
                         <span className="text-gray-700">{item.details}</span>
@@ -494,14 +514,19 @@ export default function SabbaticalCalendar() {
                         <span className="text-gray-400 ml-1.5 text-[11px]">
                           {item.type === "hotel"
                             ? item.dateEnd
-                              ? `${fmtDate(item.date)} → ${fmtDate(
-                                  item.dateEnd
-                                )}`
+                              ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}`
                               : `in: ${fmtDate(item.date)}`
                             : fmtDate(item.date)}
                         </span>
                       )}
-                      {!item.refNumber && !item.details && (
+                      {item.type === "hotel" && (item.checkInTime || item.checkOutTime) && (
+                        <span className="text-gray-400 ml-1.5 text-[11px]">
+                          {item.checkInTime && `in: ${item.checkInTime}`}
+                          {item.checkInTime && item.checkOutTime && " · "}
+                          {item.checkOutTime && `out: ${item.checkOutTime}`}
+                        </span>
+                      )}
+                      {!item.refNumber && !item.details && !(item.type === "hotel" && item.hotelName) && (
                         <span className="text-gray-400">No details</span>
                       )}
                     </div>
@@ -671,7 +696,7 @@ export default function SabbaticalCalendar() {
       {showTripForm && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200] p-4"
-          onClick={(e) => {
+          onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               setShowTripForm(false);
               setEditTripId(null);
@@ -783,14 +808,14 @@ export default function SabbaticalCalendar() {
       {showItemForm && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-[200] p-4"
-          onClick={(e) => {
+          onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               setShowItemForm(false);
               setEditItemId(null);
             }
           }}
         >
-          <div className="bg-white rounded-2xl p-5 w-full max-w-[400px]">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-[400px] max-h-[85vh] overflow-y-auto">
             <h3 className="text-[17px] font-bold mb-3.5">
               {editItemId ? "Edit" : "Add"} Detail
             </h3>
@@ -851,37 +876,80 @@ export default function SabbaticalCalendar() {
                 </div>
               )}
               {itemForm.type === "hotel" ? (
-                <div className="flex gap-2">
-                  <div className="flex-1">
+                <>
+                  <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                      Check-in
+                      Hotel Name
                     </label>
                     <input
-                      type="date"
-                      value={itemForm.date}
+                      value={itemForm.hotelName}
                       onChange={(e) =>
-                        setItemForm((f) => ({ ...f, date: e.target.value }))
+                        setItemForm((f) => ({ ...f, hotelName: e.target.value }))
                       }
+                      placeholder="e.g. Hotel Flores, NH Madrid"
                       className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
                     />
                   </div>
-                  <div className="flex-1">
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                      Check-out
-                    </label>
-                    <input
-                      type="date"
-                      value={itemForm.dateEnd}
-                      onChange={(e) =>
-                        setItemForm((f) => ({
-                          ...f,
-                          dateEnd: e.target.value,
-                        }))
-                      }
-                      className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                    />
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                        Check-in Date
+                      </label>
+                      <input
+                        type="date"
+                        value={itemForm.date}
+                        onChange={(e) =>
+                          setItemForm((f) => ({ ...f, date: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                        Check-out Date
+                      </label>
+                      <input
+                        type="date"
+                        value={itemForm.dateEnd}
+                        onChange={(e) =>
+                          setItemForm((f) => ({
+                            ...f,
+                            dateEnd: e.target.value,
+                          }))
+                        }
+                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                      />
+                    </div>
                   </div>
-                </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                        Check-in Time
+                      </label>
+                      <input
+                        type="time"
+                        value={itemForm.checkInTime}
+                        onChange={(e) =>
+                          setItemForm((f) => ({ ...f, checkInTime: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                        Check-out Time
+                      </label>
+                      <input
+                        type="time"
+                        value={itemForm.checkOutTime}
+                        onChange={(e) =>
+                          setItemForm((f) => ({ ...f, checkOutTime: e.target.value }))
+                        }
+                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                      />
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">

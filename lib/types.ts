@@ -6,6 +6,9 @@ export interface TripItem {
   dateEnd?: string;
   refNumber: string;
   details: string;
+  hotelName?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 export interface Trip {
