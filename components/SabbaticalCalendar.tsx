@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { MONTHS, WEEKDAYS, TRIP_COLORS, ITEM_ICONS, ITEM_LABELS } from "@/lib/constants";
+import { MONTHS, TRIP_COLORS, ITEM_ICONS, ITEM_LABELS } from "@/lib/constants";
 import { SCHOOL_EVENTS } from "@/lib/schoolEvents";
 import type { Trip, TripItem } from "@/lib/types";
+import CalendarMonth from "./CalendarMonth";
 
 const dk = (y: number, m: number, d: number) =>
   `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -63,6 +64,7 @@ export default function SabbaticalCalendar() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [calendarMode, setCalendarMode] = useState<"all" | "trips">("all");
 
   // Load trips from API
   useEffect(() => {
@@ -199,16 +201,6 @@ export default function SabbaticalCalendar() {
     setShowItemForm(true);
   };
 
-  const getDIM = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
-  const getSD = (y: number, m: number) => {
-    const d = new Date(y, m, 1).getDay();
-    return d === 0 ? 6 : d - 1;
-  };
-  const isWe = (y: number, m: number, d: number) => {
-    const w = new Date(y, m, d).getDay();
-    return w === 0 || w === 6;
-  };
-
   const detailTrip = trips.find((t) => t.id === detailTripId);
   const sortedTrips = [...trips].sort((a, b) =>
     a.startDate.localeCompare(b.startDate)
@@ -222,98 +214,30 @@ export default function SabbaticalCalendar() {
     return "";
   };
 
-  const schoolTextColor = (type: string) => {
-    if (type === "vacation") return "text-orange-700";
-    if (type === "holiday") return "text-red-600";
-    if (type === "tentative") return "text-yellow-700 italic";
-    return "text-green-700";
+  const handleTripClick = (tripId: string) => {
+    setDetailTripId(tripId);
+    setView("tripDetail");
+    setSelectedDate(null);
   };
 
   // Calendar view
   const renderCalendar = () => (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {MONTHS.map(({ year, month, label }) => {
-          const days = getDIM(year, month);
-          const start = getSD(year, month);
-          const cells: React.ReactNode[] = [];
-          for (let i = 0; i < start; i++)
-            cells.push(<div key={`e${i}`} />);
-          for (let d = 1; d <= days; d++) {
-            const k = dk(year, month, d);
-            const sch = SCHOOL_EVENTS[k];
-            const dt = tripsByDate[k] || [];
-            const we = isWe(year, month, d);
-            const ty = sch?.type;
-            let bgClass = "bg-white";
-            if (ty) bgClass = schoolBg(ty);
-            else if (we) bgClass = "bg-gray-50";
-
-            cells.push(
-              <div
-                key={d}
-                onClick={() => setSelectedDate(selectedDate === k ? null : k)}
-                className={`${bgClass} rounded-md p-0.5 min-h-[50px] cursor-pointer text-[11px] overflow-hidden ${
-                  selectedDate === k
-                    ? "border-2 border-indigo-500"
-                    : "border border-gray-200"
-                }`}
-              >
-                <div
-                  className={`font-semibold text-xs ${
-                    we ? "text-gray-400" : "text-gray-700"
-                  }`}
-                >
-                  {d}
-                </div>
-                {sch && (
-                  <div
-                    className={`text-[9px] leading-[11px] font-medium truncate ${schoolTextColor(
-                      ty!
-                    )}`}
-                  >
-                    {sch.label}
-                  </div>
-                )}
-                {dt.length > 0 && (
-                  <div className="flex gap-0.5 mt-0.5 flex-wrap">
-                    {dt.slice(0, 2).map((t, i) => (
-                      <div
-                        key={i}
-                        className="text-[8px] px-1 rounded truncate max-w-full font-bold"
-                        style={{
-                          background:
-                            TRIP_COLORS[t.color % TRIP_COLORS.length] + "22",
-                          color: TRIP_COLORS[t.color % TRIP_COLORS.length],
-                        }}
-                      >
-                        📍{t.destination.slice(0, 10)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          }
-          return (
-            <div key={label} className="mb-5">
-              <h3 className="mb-1.5 text-[15px] font-bold text-slate-800">
-                {label}
-              </h3>
-              <div className="grid grid-cols-7 gap-0.5 mb-0.5">
-                {WEEKDAYS.map((d) => (
-                  <div
-                    key={d}
-                    className="text-center text-[10px] font-semibold text-gray-400 py-0.5"
-                  >
-                    {d}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-0.5">{cells}</div>
-            </div>
-          );
-        })}
+        {MONTHS.map(({ year, month, label }) => (
+          <CalendarMonth
+            key={label}
+            year={year}
+            month={month}
+            label={label}
+            calendarMode={calendarMode}
+            tripsByDate={tripsByDate}
+            trips={trips}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onTripClick={handleTripClick}
+          />
+        ))}
       </div>
 
       {/* Bottom sheet for selected date */}
@@ -354,11 +278,7 @@ export default function SabbaticalCalendar() {
                     background: c + "11",
                     borderColor: c + "33",
                   }}
-                  onClick={() => {
-                    setDetailTripId(trip.id);
-                    setView("tripDetail");
-                    setSelectedDate(null);
-                  }}
+                  onClick={() => handleTripClick(trip.id)}
                 >
                   <strong style={{ color: c }}>
                     📍 {trip.destination}
@@ -681,26 +601,64 @@ export default function SabbaticalCalendar() {
         </button>
       )}
 
-      {/* Legend */}
+      {/* Toggle + Legend */}
       {view === "calendar" && (
-        <div className="flex gap-2.5 flex-wrap mb-3 text-[11px]">
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-green-50 border border-green-200" />{" "}
-            Milestone
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-red-50 border border-red-200" />{" "}
-            Holiday
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-yellow-50 border border-dashed border-yellow-300" />{" "}
-            <em>Tentative</em>
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-sm bg-orange-50 border border-orange-200" />{" "}
-            Vacation
-          </span>
-          <span className="flex items-center gap-1">📍 Trip</span>
+        <div className="flex flex-col gap-2 mb-3">
+          {/* Mode toggle */}
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              <button
+                onClick={() => setCalendarMode("all")}
+                className={`px-3 py-1 text-[11px] font-semibold cursor-pointer border-none transition-colors ${
+                  calendarMode === "all"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-slate-500 hover:bg-slate-50"
+                }`}
+              >
+                All Events
+              </button>
+              <button
+                onClick={() => setCalendarMode("trips")}
+                className={`px-3 py-1 text-[11px] font-semibold cursor-pointer border-none transition-colors ${
+                  calendarMode === "trips"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-slate-500 hover:bg-slate-50"
+                }`}
+              >
+                ✈️ Trips Only
+              </button>
+            </div>
+          </div>
+
+          {/* Legend */}
+          {calendarMode === "all" ? (
+            <div className="flex gap-2.5 flex-wrap text-[11px]">
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-green-50 border border-green-200" />{" "}
+                Milestone
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-red-50 border border-red-200" />{" "}
+                Holiday
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-yellow-50 border border-dashed border-yellow-300" />{" "}
+                <em>Tentative</em>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-orange-50 border border-orange-200" />{" "}
+                Vacation
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-300" />{" "}
+                Trip
+              </span>
+            </div>
+          ) : (
+            <div className="flex gap-2.5 flex-wrap text-[11px] text-slate-500">
+              Colored bars show your trips across the calendar
+            </div>
+          )}
         </div>
       )}
 
