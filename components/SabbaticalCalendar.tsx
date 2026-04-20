@@ -34,6 +34,7 @@ interface ItemFormData {
   details: string;
   refNumber: string;
   direction: "outbound" | "return";
+  airline: string;
   hotelName: string;
   checkInTime: string;
   checkOutTime: string;
@@ -79,6 +80,7 @@ export default function SabbaticalCalendar() {
     details: "",
     refNumber: "",
     direction: "outbound",
+    airline: "",
     hotelName: "",
     checkInTime: "",
     checkOutTime: "",
@@ -248,6 +250,7 @@ export default function SabbaticalCalendar() {
       details: "",
       refNumber: "",
       direction: "outbound",
+      airline: "",
       hotelName: "",
       checkInTime: "",
       checkOutTime: "",
@@ -281,6 +284,7 @@ export default function SabbaticalCalendar() {
       details: item.details,
       refNumber: item.refNumber,
       direction: item.direction || "outbound",
+      airline: item.airline || "",
       hotelName: item.hotelName || "",
       checkInTime: item.checkInTime || "",
       checkOutTime: item.checkOutTime || "",
@@ -744,6 +748,7 @@ export default function SabbaticalCalendar() {
                     details: "",
                     refNumber: "",
                     direction: "outbound",
+                    airline: "",
                     hotelName: "",
                     checkInTime: "",
                     checkOutTime: "",
@@ -805,6 +810,7 @@ export default function SabbaticalCalendar() {
                         {/* FLIGHT display */}
                         {item.type === "flight" && (
                           <>
+                            {item.airline && <span className="text-gray-600 mr-1.5">{item.airline}</span>}
                             {item.flightNumber && <strong className="mr-1.5">{item.flightNumber}</strong>}
                             {item.details && <span className="text-gray-700">{item.details}</span>}
                             {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
@@ -1288,6 +1294,10 @@ export default function SabbaticalCalendar() {
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Date</label>
                     <input type="date" value={itemForm.date} onChange={(e) => setItemForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Airline</label>
+                    <input value={itemForm.airline} onChange={(e) => setItemForm((f) => ({ ...f, airline: e.target.value }))} placeholder="e.g. Iberia, Ryanair, United" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                   </div>
                   <div className="flex gap-2">
                     <div className="flex-1">

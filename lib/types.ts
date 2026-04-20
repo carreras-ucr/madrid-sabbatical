@@ -11,6 +11,7 @@ export interface TripItem {
   checkInTime?: string;
   checkOutTime?: string;
   // Flight fields
+  airline?: string;
   flightNumber?: string;
   departureTime?: string;
   arrivalTime?: string;
