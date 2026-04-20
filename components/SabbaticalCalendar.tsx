@@ -109,6 +109,7 @@ export default function SabbaticalCalendar() {
   });
   const [detailVisitId, setDetailVisitId] = useState<string | null>(null);
   const [confirmDeleteVisit, setConfirmDeleteVisit] = useState<string | null>(null);
+  const [uploadingItemId, setUploadingItemId] = useState<string | null>(null);
 
   // Load trips and visits from API
   useEffect(() => {
@@ -294,6 +295,56 @@ export default function SabbaticalCalendar() {
     });
     setEditItemId(item.id);
     setShowItemForm(true);
+  };
+
+  // File attachment handlers
+  const handleFileUpload = async (tripId: string, itemId: string, file: File) => {
+    setUploadingItemId(itemId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/files/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const attachment = await res.json();
+      const newTrips = trips.map((t) => {
+        if (t.id !== tripId) return t;
+        return {
+          ...t,
+          items: t.items.map((it) =>
+            it.id !== itemId
+              ? it
+              : { ...it, attachments: [...(it.attachments || []), attachment] }
+          ),
+        };
+      });
+      saveTrips(newTrips);
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setUploadingItemId(null);
+    }
+  };
+
+  const handleDeleteAttachment = async (tripId: string, itemId: string, url: string) => {
+    try {
+      await fetch("/api/files/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+    } catch {}
+    const newTrips = trips.map((t) => {
+      if (t.id !== tripId) return t;
+      return {
+        ...t,
+        items: t.items.map((it) =>
+          it.id !== itemId
+            ? it
+            : { ...it, attachments: (it.attachments || []).filter((a) => a.url !== url) }
+        ),
+      };
+    });
+    saveTrips(newTrips);
   };
 
   // Visit CRUD
@@ -734,93 +785,137 @@ export default function SabbaticalCalendar() {
                 {grouped[type].map((item) => (
                   <div
                     key={item.id}
-                    className="flex justify-between items-center px-3 py-2.5 mb-1 rounded-lg bg-white border border-gray-200"
+                    className="px-3 py-2.5 mb-1 rounded-lg bg-white border border-gray-200"
                   >
-                    <div className="text-[13px] min-w-0 flex-1">
-                      {/* Direction badge for flights/trains */}
-                      {(item.type === "flight" || item.type === "train") && (
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 ${
-                            item.direction === "return"
-                              ? "text-purple-600 bg-purple-50"
-                              : "text-blue-600 bg-blue-100"
-                          }`}
+                    <div className="flex justify-between items-center">
+                      <div className="text-[13px] min-w-0 flex-1">
+                        {/* Direction badge for flights/trains */}
+                        {(item.type === "flight" || item.type === "train") && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 ${
+                              item.direction === "return"
+                                ? "text-purple-600 bg-purple-50"
+                                : "text-blue-600 bg-blue-100"
+                            }`}
+                          >
+                            {item.direction === "return" ? "↩ Return" : "→ Outbound"}
+                          </span>
+                        )}
+
+                        {/* FLIGHT display */}
+                        {item.type === "flight" && (
+                          <>
+                            {item.flightNumber && <strong className="mr-1.5">{item.flightNumber}</strong>}
+                            {item.details && <span className="text-gray-700">{item.details}</span>}
+                            {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
+                            {(item.departureTime || item.arrivalTime) && (
+                              <span className="text-gray-400 ml-1.5 text-[11px]">
+                                {item.departureTime && `dep ${item.departureTime}`}
+                                {item.departureTime && item.arrivalTime && " → "}
+                                {item.arrivalTime && `arr ${item.arrivalTime}`}
+                              </span>
+                            )}
+                            {item.refNumber && <span className="text-gray-400 ml-1.5 text-[10px]">Conf: {item.refNumber}</span>}
+                            {item.bookedWith && <span className="text-gray-400 ml-1.5 text-[10px]">via {item.bookedWith}</span>}
+                            <div className="flex gap-2 mt-0.5 flex-wrap">
+                              {item.ticketMiguel && <span className="text-[9px] text-gray-400">Miguel: {item.ticketMiguel}</span>}
+                              {item.ticketYasemin && <span className="text-[9px] text-gray-400">Yasemin: {item.ticketYasemin}</span>}
+                              {item.ticketLara && <span className="text-[9px] text-gray-400">Lara: {item.ticketLara}</span>}
+                              {item.ticketMateo && <span className="text-[9px] text-gray-400">Mateo: {item.ticketMateo}</span>}
+                            </div>
+                            {!item.flightNumber && !item.details && <span className="text-gray-400">No details</span>}
+                          </>
+                        )}
+
+                        {/* HOTEL display */}
+                        {item.type === "hotel" && (
+                          <>
+                            {item.hotelName && <strong className="mr-1.5">{item.hotelName}</strong>}
+                            {item.refNumber && <span className="text-gray-500 text-[11px] mr-1.5">({item.refNumber})</span>}
+                            {item.details && <span className="text-gray-700">{item.details}</span>}
+                            {item.date && (
+                              <span className="text-gray-400 ml-1.5 text-[11px]">
+                                {item.dateEnd ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}` : `in: ${fmtDate(item.date)}`}
+                              </span>
+                            )}
+                            {(item.checkInTime || item.checkOutTime) && (
+                              <span className="text-gray-400 ml-1.5 text-[11px]">
+                                {item.checkInTime && `in: ${item.checkInTime}`}
+                                {item.checkInTime && item.checkOutTime && " · "}
+                                {item.checkOutTime && `out: ${item.checkOutTime}`}
+                              </span>
+                            )}
+                            {!item.hotelName && !item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
+                          </>
+                        )}
+
+                        {/* TRAIN / OTHER display */}
+                        {(item.type === "train" || item.type === "other") && (
+                          <>
+                            {item.refNumber && <strong className="mr-1.5">{item.refNumber}</strong>}
+                            {item.details && <span className="text-gray-700">{item.details}</span>}
+                            {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
+                            {!item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
+                          </>
+                        )}
+                      </div>
+                      <div className="flex gap-1 shrink-0 ml-2">
+                        <label className="bg-transparent border-none cursor-pointer text-sm p-0.5 relative">
+                          {uploadingItemId === item.id ? (
+                            <span className="text-[10px] text-gray-400">...</span>
+                          ) : (
+                            <>
+                              📎
+                              <input
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg"
+                                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(detailTrip.id, item.id, file);
+                                  e.target.value = "";
+                                }}
+                              />
+                            </>
+                          )}
+                        </label>
+                        <button
+                          onClick={() => openEditItem(item)}
+                          className="bg-transparent border-none cursor-pointer text-sm p-0.5"
                         >
-                          {item.direction === "return" ? "↩ Return" : "→ Outbound"}
-                        </span>
-                      )}
-
-                      {/* FLIGHT display */}
-                      {item.type === "flight" && (
-                        <>
-                          {item.flightNumber && <strong className="mr-1.5">{item.flightNumber}</strong>}
-                          {item.details && <span className="text-gray-700">{item.details}</span>}
-                          {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
-                          {(item.departureTime || item.arrivalTime) && (
-                            <span className="text-gray-400 ml-1.5 text-[11px]">
-                              {item.departureTime && `dep ${item.departureTime}`}
-                              {item.departureTime && item.arrivalTime && " → "}
-                              {item.arrivalTime && `arr ${item.arrivalTime}`}
-                            </span>
-                          )}
-                          {item.refNumber && <span className="text-gray-400 ml-1.5 text-[10px]">Conf: {item.refNumber}</span>}
-                          {item.bookedWith && <span className="text-gray-400 ml-1.5 text-[10px]">via {item.bookedWith}</span>}
-                          <div className="flex gap-2 mt-0.5 flex-wrap">
-                            {item.ticketMiguel && <span className="text-[9px] text-gray-400">Miguel: {item.ticketMiguel}</span>}
-                            {item.ticketYasemin && <span className="text-[9px] text-gray-400">Yasemin: {item.ticketYasemin}</span>}
-                            {item.ticketLara && <span className="text-[9px] text-gray-400">Lara: {item.ticketLara}</span>}
-                            {item.ticketMateo && <span className="text-[9px] text-gray-400">Mateo: {item.ticketMateo}</span>}
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => deleteItem(detailTrip.id, item.id)}
+                          className="bg-transparent border-none cursor-pointer text-sm p-0.5"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                    {/* Attachments */}
+                    {(item.attachments || []).length > 0 && (
+                      <div className="mt-1.5 flex flex-col gap-1">
+                        {item.attachments!.map((att) => (
+                          <div key={att.url} className="flex items-center gap-1.5 text-[11px]">
+                            <a
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:underline truncate"
+                            >
+                              📄 {att.filename}
+                            </a>
+                            <button
+                              onClick={() => handleDeleteAttachment(detailTrip.id, item.id, att.url)}
+                              className="text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer text-[10px] shrink-0"
+                            >
+                              ✕
+                            </button>
                           </div>
-                          {!item.flightNumber && !item.details && <span className="text-gray-400">No details</span>}
-                        </>
-                      )}
-
-                      {/* HOTEL display */}
-                      {item.type === "hotel" && (
-                        <>
-                          {item.hotelName && <strong className="mr-1.5">{item.hotelName}</strong>}
-                          {item.refNumber && <span className="text-gray-500 text-[11px] mr-1.5">({item.refNumber})</span>}
-                          {item.details && <span className="text-gray-700">{item.details}</span>}
-                          {item.date && (
-                            <span className="text-gray-400 ml-1.5 text-[11px]">
-                              {item.dateEnd ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}` : `in: ${fmtDate(item.date)}`}
-                            </span>
-                          )}
-                          {(item.checkInTime || item.checkOutTime) && (
-                            <span className="text-gray-400 ml-1.5 text-[11px]">
-                              {item.checkInTime && `in: ${item.checkInTime}`}
-                              {item.checkInTime && item.checkOutTime && " · "}
-                              {item.checkOutTime && `out: ${item.checkOutTime}`}
-                            </span>
-                          )}
-                          {!item.hotelName && !item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
-                        </>
-                      )}
-
-                      {/* TRAIN / OTHER display */}
-                      {(item.type === "train" || item.type === "other") && (
-                        <>
-                          {item.refNumber && <strong className="mr-1.5">{item.refNumber}</strong>}
-                          {item.details && <span className="text-gray-700">{item.details}</span>}
-                          {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
-                          {!item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
-                        </>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0 ml-2">
-                      <button
-                        onClick={() => openEditItem(item)}
-                        className="bg-transparent border-none cursor-pointer text-sm p-0.5"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => deleteItem(detailTrip.id, item.id)}
-                        className="bg-transparent border-none cursor-pointer text-sm p-0.5"
-                      >
-                        🗑️
-                      </button>
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

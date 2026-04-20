@@ -19,6 +19,8 @@ export interface TripItem {
   ticketYasemin?: string;
   ticketLara?: string;
   ticketMateo?: string;
+  // Attachments
+  attachments?: { url: string; filename: string; uploadedAt: string }[];
 }
 
 export interface Trip {
