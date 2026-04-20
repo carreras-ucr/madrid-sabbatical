@@ -810,46 +810,66 @@ export default function SabbaticalCalendar() {
                         {/* FLIGHT display */}
                         {item.type === "flight" && (
                           <>
-                            {item.airline && <span className="text-gray-600 mr-1.5">{item.airline}</span>}
-                            {item.flightNumber && <strong className="mr-1.5">{item.flightNumber}</strong>}
-                            {item.details && <span className="text-gray-700">{item.details}</span>}
-                            {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
-                            {(item.departureTime || item.arrivalTime) && (
-                              <span className="text-gray-400 ml-1.5 text-[11px]">
-                                {item.departureTime && `dep ${item.departureTime}`}
-                                {item.departureTime && item.arrivalTime && " → "}
-                                {item.arrivalTime && `arr ${item.arrivalTime}`}
-                              </span>
+                            {/* Line 1: Airline, flight #, route */}
+                            <span>
+                              {item.airline && <span className="text-gray-700 mr-1.5">{item.airline}</span>}
+                              {item.flightNumber && <strong className="text-slate-800 mr-1.5">{item.flightNumber}</strong>}
+                              {item.details && <span className="text-gray-700">{item.details}</span>}
+                            </span>
+                            {/* Line 2: Date and times */}
+                            {(item.date || item.departureTime || item.arrivalTime) && (
+                              <div className="mt-1 text-[12px]">
+                                {item.date && <span className="text-slate-700 font-semibold mr-2">📅 {fmtDate(item.date)}</span>}
+                                {(item.departureTime || item.arrivalTime) && (
+                                  <span className="text-slate-600">
+                                    🕐 {item.departureTime && <span className="font-medium">{item.departureTime}</span>}
+                                    {item.departureTime && item.arrivalTime && <span className="mx-1">→</span>}
+                                    {item.arrivalTime && <span className="font-medium">{item.arrivalTime}</span>}
+                                  </span>
+                                )}
+                              </div>
                             )}
-                            {item.refNumber && <span className="text-gray-400 ml-1.5 text-[10px]">Conf: {item.refNumber}</span>}
-                            {item.bookedWith && <span className="text-gray-400 ml-1.5 text-[10px]">via {item.bookedWith}</span>}
-                            <div className="flex gap-2 mt-0.5 flex-wrap">
-                              {item.ticketMiguel && <span className="text-[9px] text-gray-400">Miguel: {item.ticketMiguel}</span>}
-                              {item.ticketYasemin && <span className="text-[9px] text-gray-400">Yasemin: {item.ticketYasemin}</span>}
-                              {item.ticketLara && <span className="text-[9px] text-gray-400">Lara: {item.ticketLara}</span>}
-                              {item.ticketMateo && <span className="text-[9px] text-gray-400">Mateo: {item.ticketMateo}</span>}
-                            </div>
-                            {!item.flightNumber && !item.details && <span className="text-gray-400">No details</span>}
+                            {/* Line 3: Confirmation & booked with */}
+                            {(item.refNumber || item.bookedWith) && (
+                              <div className="mt-0.5 text-[11px]">
+                                {item.refNumber && <span className="text-slate-500 mr-2">Conf: <span className="font-medium text-slate-600">{item.refNumber}</span></span>}
+                                {item.bookedWith && <span className="text-slate-500">via <span className="font-medium text-slate-600">{item.bookedWith}</span></span>}
+                              </div>
+                            )}
+                            {/* Line 4: Tickets */}
+                            {(item.ticketMiguel || item.ticketYasemin || item.ticketLara || item.ticketMateo) && (
+                              <div className="flex gap-3 mt-1 flex-wrap text-[10px]">
+                                {item.ticketMiguel && <span className="text-slate-500">Miguel: <span className="font-medium">{item.ticketMiguel}</span></span>}
+                                {item.ticketYasemin && <span className="text-slate-500">Yasemin: <span className="font-medium">{item.ticketYasemin}</span></span>}
+                                {item.ticketLara && <span className="text-slate-500">Lara: <span className="font-medium">{item.ticketLara}</span></span>}
+                                {item.ticketMateo && <span className="text-slate-500">Mateo: <span className="font-medium">{item.ticketMateo}</span></span>}
+                              </div>
+                            )}
+                            {!item.flightNumber && !item.details && !item.airline && <span className="text-gray-400">No details</span>}
                           </>
                         )}
 
                         {/* HOTEL display */}
                         {item.type === "hotel" && (
                           <>
-                            {item.hotelName && <strong className="mr-1.5">{item.hotelName}</strong>}
-                            {item.refNumber && <span className="text-gray-500 text-[11px] mr-1.5">({item.refNumber})</span>}
-                            {item.details && <span className="text-gray-700">{item.details}</span>}
+                            {item.hotelName && <strong className="text-slate-800">{item.hotelName}</strong>}
+                            {item.details && <span className="text-gray-700 ml-1.5">{item.details}</span>}
                             {item.date && (
-                              <span className="text-gray-400 ml-1.5 text-[11px]">
-                                {item.dateEnd ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}` : `in: ${fmtDate(item.date)}`}
-                              </span>
+                              <div className="mt-1 text-[12px]">
+                                <span className="text-slate-700 font-semibold">
+                                  📅 {item.dateEnd ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}` : fmtDate(item.date)}
+                                </span>
+                                {(item.checkInTime || item.checkOutTime) && (
+                                  <span className="text-slate-600 ml-2">
+                                    🕐 {item.checkInTime && <span className="font-medium">in {item.checkInTime}</span>}
+                                    {item.checkInTime && item.checkOutTime && " · "}
+                                    {item.checkOutTime && <span className="font-medium">out {item.checkOutTime}</span>}
+                                  </span>
+                                )}
+                              </div>
                             )}
-                            {(item.checkInTime || item.checkOutTime) && (
-                              <span className="text-gray-400 ml-1.5 text-[11px]">
-                                {item.checkInTime && `in: ${item.checkInTime}`}
-                                {item.checkInTime && item.checkOutTime && " · "}
-                                {item.checkOutTime && `out: ${item.checkOutTime}`}
-                              </span>
+                            {item.refNumber && (
+                              <div className="mt-0.5 text-[11px] text-slate-500">Conf: <span className="font-medium text-slate-600">{item.refNumber}</span></div>
                             )}
                             {!item.hotelName && !item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
                           </>
