@@ -6,9 +6,19 @@ export interface TripItem {
   dateEnd?: string;
   refNumber: string;
   details: string;
+  // Hotel fields
   hotelName?: string;
   checkInTime?: string;
   checkOutTime?: string;
+  // Flight fields
+  flightNumber?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  bookedWith?: string;
+  ticketMiguel?: string;
+  ticketYasemin?: string;
+  ticketLara?: string;
+  ticketMateo?: string;
 }
 
 export interface Trip {

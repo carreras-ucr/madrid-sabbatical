@@ -37,6 +37,14 @@ interface ItemFormData {
   hotelName: string;
   checkInTime: string;
   checkOutTime: string;
+  flightNumber: string;
+  departureTime: string;
+  arrivalTime: string;
+  bookedWith: string;
+  ticketMiguel: string;
+  ticketYasemin: string;
+  ticketLara: string;
+  ticketMateo: string;
 }
 
 interface VisitFormData {
@@ -74,6 +82,14 @@ export default function SabbaticalCalendar() {
     hotelName: "",
     checkInTime: "",
     checkOutTime: "",
+    flightNumber: "",
+    departureTime: "",
+    arrivalTime: "",
+    bookedWith: "",
+    ticketMiguel: "",
+    ticketYasemin: "",
+    ticketLara: "",
+    ticketMateo: "",
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -234,6 +250,14 @@ export default function SabbaticalCalendar() {
       hotelName: "",
       checkInTime: "",
       checkOutTime: "",
+      flightNumber: "",
+      departureTime: "",
+      arrivalTime: "",
+      bookedWith: "",
+      ticketMiguel: "",
+      ticketYasemin: "",
+      ticketLara: "",
+      ticketMateo: "",
     });
     setShowItemForm(false);
     setEditItemId(null);
@@ -259,6 +283,14 @@ export default function SabbaticalCalendar() {
       hotelName: item.hotelName || "",
       checkInTime: item.checkInTime || "",
       checkOutTime: item.checkOutTime || "",
+      flightNumber: item.flightNumber || "",
+      departureTime: item.departureTime || "",
+      arrivalTime: item.arrivalTime || "",
+      bookedWith: item.bookedWith || "",
+      ticketMiguel: item.ticketMiguel || "",
+      ticketYasemin: item.ticketYasemin || "",
+      ticketLara: item.ticketLara || "",
+      ticketMateo: item.ticketMateo || "",
     });
     setEditItemId(item.id);
     setShowItemForm(true);
@@ -664,6 +696,14 @@ export default function SabbaticalCalendar() {
                     hotelName: "",
                     checkInTime: "",
                     checkOutTime: "",
+                    flightNumber: "",
+                    departureTime: "",
+                    arrivalTime: "",
+                    bookedWith: "",
+                    ticketMiguel: "",
+                    ticketYasemin: "",
+                    ticketLara: "",
+                    ticketMateo: "",
                   });
                   setEditItemId(null);
                   setShowItemForm(true);
@@ -697,6 +737,7 @@ export default function SabbaticalCalendar() {
                     className="flex justify-between items-center px-3 py-2.5 mb-1 rounded-lg bg-white border border-gray-200"
                   >
                     <div className="text-[13px] min-w-0 flex-1">
+                      {/* Direction badge for flights/trains */}
                       {(item.type === "flight" || item.type === "train") && (
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 ${
@@ -705,40 +746,65 @@ export default function SabbaticalCalendar() {
                               : "text-blue-600 bg-blue-100"
                           }`}
                         >
-                          {item.direction === "return"
-                            ? "↩ Return"
-                            : "→ Outbound"}
+                          {item.direction === "return" ? "↩ Return" : "→ Outbound"}
                         </span>
                       )}
-                      {item.type === "hotel" && item.hotelName && (
-                        <strong className="mr-1.5">{item.hotelName}</strong>
+
+                      {/* FLIGHT display */}
+                      {item.type === "flight" && (
+                        <>
+                          {item.flightNumber && <strong className="mr-1.5">{item.flightNumber}</strong>}
+                          {item.details && <span className="text-gray-700">{item.details}</span>}
+                          {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
+                          {(item.departureTime || item.arrivalTime) && (
+                            <span className="text-gray-400 ml-1.5 text-[11px]">
+                              {item.departureTime && `dep ${item.departureTime}`}
+                              {item.departureTime && item.arrivalTime && " → "}
+                              {item.arrivalTime && `arr ${item.arrivalTime}`}
+                            </span>
+                          )}
+                          {item.refNumber && <span className="text-gray-400 ml-1.5 text-[10px]">Conf: {item.refNumber}</span>}
+                          {item.bookedWith && <span className="text-gray-400 ml-1.5 text-[10px]">via {item.bookedWith}</span>}
+                          <div className="flex gap-2 mt-0.5 flex-wrap">
+                            {item.ticketMiguel && <span className="text-[9px] text-gray-400">Miguel: {item.ticketMiguel}</span>}
+                            {item.ticketYasemin && <span className="text-[9px] text-gray-400">Yasemin: {item.ticketYasemin}</span>}
+                            {item.ticketLara && <span className="text-[9px] text-gray-400">Lara: {item.ticketLara}</span>}
+                            {item.ticketMateo && <span className="text-[9px] text-gray-400">Mateo: {item.ticketMateo}</span>}
+                          </div>
+                          {!item.flightNumber && !item.details && <span className="text-gray-400">No details</span>}
+                        </>
                       )}
-                      {item.refNumber && (
-                        <strong className={`mr-1.5 ${item.type === "hotel" && item.hotelName ? "font-normal text-gray-500" : ""}`}>
-                          {item.type === "hotel" && item.hotelName ? `(${item.refNumber})` : item.refNumber}
-                        </strong>
+
+                      {/* HOTEL display */}
+                      {item.type === "hotel" && (
+                        <>
+                          {item.hotelName && <strong className="mr-1.5">{item.hotelName}</strong>}
+                          {item.refNumber && <span className="text-gray-500 text-[11px] mr-1.5">({item.refNumber})</span>}
+                          {item.details && <span className="text-gray-700">{item.details}</span>}
+                          {item.date && (
+                            <span className="text-gray-400 ml-1.5 text-[11px]">
+                              {item.dateEnd ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}` : `in: ${fmtDate(item.date)}`}
+                            </span>
+                          )}
+                          {(item.checkInTime || item.checkOutTime) && (
+                            <span className="text-gray-400 ml-1.5 text-[11px]">
+                              {item.checkInTime && `in: ${item.checkInTime}`}
+                              {item.checkInTime && item.checkOutTime && " · "}
+                              {item.checkOutTime && `out: ${item.checkOutTime}`}
+                            </span>
+                          )}
+                          {!item.hotelName && !item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
+                        </>
                       )}
-                      {item.details && (
-                        <span className="text-gray-700">{item.details}</span>
-                      )}
-                      {item.date && (
-                        <span className="text-gray-400 ml-1.5 text-[11px]">
-                          {item.type === "hotel"
-                            ? item.dateEnd
-                              ? `${fmtDate(item.date)} → ${fmtDate(item.dateEnd)}`
-                              : `in: ${fmtDate(item.date)}`
-                            : fmtDate(item.date)}
-                        </span>
-                      )}
-                      {item.type === "hotel" && (item.checkInTime || item.checkOutTime) && (
-                        <span className="text-gray-400 ml-1.5 text-[11px]">
-                          {item.checkInTime && `in: ${item.checkInTime}`}
-                          {item.checkInTime && item.checkOutTime && " · "}
-                          {item.checkOutTime && `out: ${item.checkOutTime}`}
-                        </span>
-                      )}
-                      {!item.refNumber && !item.details && !(item.type === "hotel" && item.hotelName) && (
-                        <span className="text-gray-400">No details</span>
+
+                      {/* TRAIN / OTHER display */}
+                      {(item.type === "train" || item.type === "other") && (
+                        <>
+                          {item.refNumber && <strong className="mr-1.5">{item.refNumber}</strong>}
+                          {item.details && <span className="text-gray-700">{item.details}</span>}
+                          {item.date && <span className="text-gray-400 ml-1.5 text-[11px]">{fmtDate(item.date)}</span>}
+                          {!item.refNumber && !item.details && <span className="text-gray-400">No details</span>}
+                        </>
                       )}
                     </div>
                     <div className="flex gap-1 shrink-0 ml-2">
@@ -1121,122 +1187,119 @@ export default function SabbaticalCalendar() {
                   </div>
                 </div>
               )}
-              {itemForm.type === "hotel" ? (
+              {/* === FLIGHT-SPECIFIC FIELDS === */}
+              {itemForm.type === "flight" && (
                 <>
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                      Hotel Name
-                    </label>
-                    <input
-                      value={itemForm.hotelName}
-                      onChange={(e) =>
-                        setItemForm((f) => ({ ...f, hotelName: e.target.value }))
-                      }
-                      placeholder="e.g. Hotel Flores, NH Madrid"
-                      className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                    />
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Date</label>
+                    <input type="date" value={itemForm.date} onChange={(e) => setItemForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                   </div>
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                        Check-in Date
-                      </label>
-                      <input
-                        type="date"
-                        value={itemForm.date}
-                        onChange={(e) =>
-                          setItemForm((f) => ({ ...f, date: e.target.value }))
-                        }
-                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                      />
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Flight #</label>
+                      <input value={itemForm.flightNumber} onChange={(e) => setItemForm((f) => ({ ...f, flightNumber: e.target.value }))} placeholder="e.g. IB3456" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                     </div>
                     <div className="flex-1">
-                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                        Check-out Date
-                      </label>
-                      <input
-                        type="date"
-                        value={itemForm.dateEnd}
-                        onChange={(e) =>
-                          setItemForm((f) => ({
-                            ...f,
-                            dateEnd: e.target.value,
-                          }))
-                        }
-                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                      />
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Booking Confirmation #</label>
+                      <input value={itemForm.refNumber} onChange={(e) => setItemForm((f) => ({ ...f, refNumber: e.target.value }))} placeholder="e.g. ABC123" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Route / Details</label>
+                    <input value={itemForm.details} onChange={(e) => setItemForm((f) => ({ ...f, details: e.target.value }))} placeholder="e.g. MAD → OPO" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Departure Time</label>
+                      <input type="time" value={itemForm.departureTime} onChange={(e) => setItemForm((f) => ({ ...f, departureTime: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Arrival Time</label>
+                      <input type="time" value={itemForm.arrivalTime} onChange={(e) => setItemForm((f) => ({ ...f, arrivalTime: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Booked With</label>
+                    <input value={itemForm.bookedWith} onChange={(e) => setItemForm((f) => ({ ...f, bookedWith: e.target.value }))} placeholder="e.g. Iberia Avios, United MileagePlus, cash" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Ticket # Miguel</label>
+                      <input value={itemForm.ticketMiguel} onChange={(e) => setItemForm((f) => ({ ...f, ticketMiguel: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Ticket # Yasemin</label>
+                      <input value={itemForm.ticketYasemin} onChange={(e) => setItemForm((f) => ({ ...f, ticketYasemin: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                        Check-in Time
-                      </label>
-                      <input
-                        type="time"
-                        value={itemForm.checkInTime}
-                        onChange={(e) =>
-                          setItemForm((f) => ({ ...f, checkInTime: e.target.value }))
-                        }
-                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                      />
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Ticket # Lara</label>
+                      <input value={itemForm.ticketLara} onChange={(e) => setItemForm((f) => ({ ...f, ticketLara: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                     </div>
                     <div className="flex-1">
-                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                        Check-out Time
-                      </label>
-                      <input
-                        type="time"
-                        value={itemForm.checkOutTime}
-                        onChange={(e) =>
-                          setItemForm((f) => ({ ...f, checkOutTime: e.target.value }))
-                        }
-                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                      />
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Ticket # Mateo</label>
+                      <input value={itemForm.ticketMateo} onChange={(e) => setItemForm((f) => ({ ...f, ticketMateo: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                     </div>
                   </div>
                 </>
-              ) : (
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={itemForm.date}
-                    onChange={(e) =>
-                      setItemForm((f) => ({ ...f, date: e.target.value }))
-                    }
-                    className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                  />
-                </div>
               )}
-              <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                  Ref # (flight number, train number, booking code)
-                </label>
-                <input
-                  value={itemForm.refNumber}
-                  onChange={(e) =>
-                    setItemForm((f) => ({ ...f, refNumber: e.target.value }))
-                  }
-                  placeholder="e.g. IB3456, AVE 02345, BKNG-7890"
-                  className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                  Details
-                </label>
-                <input
-                  value={itemForm.details}
-                  onChange={(e) =>
-                    setItemForm((f) => ({ ...f, details: e.target.value }))
-                  }
-                  placeholder="e.g. MAD→OPO dep 14:30, Hotel Flores check-in 15:00"
-                  className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                />
-              </div>
+
+              {/* === HOTEL-SPECIFIC FIELDS === */}
+              {itemForm.type === "hotel" && (
+                <>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Hotel Name</label>
+                    <input value={itemForm.hotelName} onChange={(e) => setItemForm((f) => ({ ...f, hotelName: e.target.value }))} placeholder="e.g. Hotel Flores, NH Madrid" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Check-in Date</label>
+                      <input type="date" value={itemForm.date} onChange={(e) => setItemForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Check-out Date</label>
+                      <input type="date" value={itemForm.dateEnd} onChange={(e) => setItemForm((f) => ({ ...f, dateEnd: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Check-in Time</label>
+                      <input type="time" value={itemForm.checkInTime} onChange={(e) => setItemForm((f) => ({ ...f, checkInTime: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Check-out Time</label>
+                      <input type="time" value={itemForm.checkOutTime} onChange={(e) => setItemForm((f) => ({ ...f, checkOutTime: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Booking Confirmation #</label>
+                    <input value={itemForm.refNumber} onChange={(e) => setItemForm((f) => ({ ...f, refNumber: e.target.value }))} placeholder="e.g. BKNG-7890" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Details</label>
+                    <input value={itemForm.details} onChange={(e) => setItemForm((f) => ({ ...f, details: e.target.value }))} placeholder="e.g. Room type, special requests" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                </>
+              )}
+
+              {/* === TRAIN / OTHER FIELDS === */}
+              {(itemForm.type === "train" || itemForm.type === "other") && (
+                <>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Date</label>
+                    <input type="date" value={itemForm.date} onChange={(e) => setItemForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Ref #</label>
+                    <input value={itemForm.refNumber} onChange={(e) => setItemForm((f) => ({ ...f, refNumber: e.target.value }))} placeholder="e.g. AVE 02345, booking code" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Details</label>
+                    <input value={itemForm.details} onChange={(e) => setItemForm((f) => ({ ...f, details: e.target.value }))} placeholder="e.g. MAD→BCN dep 10:30" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                </>
+              )}
               <div className="flex gap-2 mt-1">
                 <button
                   onClick={saveItem}
