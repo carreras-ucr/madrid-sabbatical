@@ -3,10 +3,13 @@
 import { useState } from "react";
 import type { Trip, Visit } from "@/lib/types";
 import { TRIP_COLORS } from "@/lib/constants";
+import { getStopsForMonth } from "@/lib/tripLayout";
 
 interface MonthTripSummaryProps {
   trips: Trip[];
   visits: Visit[];
+  year: number;
+  month: number;
   defaultExpanded: boolean;
   onTripClick: (tripId: string) => void;
   onVisitClick: (visitId: string) => void;
@@ -21,13 +24,40 @@ const fmtDate = (s: string) => {
 export default function MonthTripSummary({
   trips,
   visits,
+  year,
+  month,
   defaultExpanded,
   onTripClick,
   onVisitClick,
 }: MonthTripSummaryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const total = trips.length + visits.length;
 
+  // Build display rows: for multi-destination trips, expand to one row per stop in month
+  type TripRow = { trip: Trip; label: string; startDate: string; endDate: string };
+
+  const rows: TripRow[] = [];
+  for (const trip of trips) {
+    const stops = getStopsForMonth(trip, year, month);
+    if (trip.tripType === "multi" && stops.length > 0) {
+      for (const stop of stops) {
+        rows.push({
+          trip,
+          label: stop.city,
+          startDate: stop.startDate,
+          endDate: stop.endDate,
+        });
+      }
+    } else {
+      rows.push({
+        trip,
+        label: trip.destination,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+      });
+    }
+  }
+
+  const total = rows.length + visits.length;
   if (total === 0) return null;
 
   return (
@@ -43,12 +73,12 @@ export default function MonthTripSummary({
       </button>
       {expanded && (
         <div className="mt-1 flex flex-col gap-1">
-          {trips.map((trip) => {
-            const c = TRIP_COLORS[trip.color % TRIP_COLORS.length];
+          {rows.map((row, i) => {
+            const c = TRIP_COLORS[row.trip.color % TRIP_COLORS.length];
             return (
               <div
-                key={trip.id}
-                onClick={() => onTripClick(trip.id)}
+                key={`${row.trip.id}-${i}`}
+                onClick={() => onTripClick(row.trip.id)}
                 className="flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 <div
@@ -56,10 +86,10 @@ export default function MonthTripSummary({
                   style={{ background: c }}
                 />
                 <span className="text-[11px] font-bold" style={{ color: c }}>
-                  📍 {trip.destination}
+                  📍 {row.label}
                 </span>
                 <span className="text-[10px] text-gray-400">
-                  {fmtDate(trip.startDate)} – {fmtDate(trip.endDate)}
+                  {fmtDate(row.startDate)} – {fmtDate(row.endDate)}
                 </span>
               </div>
             );

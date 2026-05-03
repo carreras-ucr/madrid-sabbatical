@@ -1,5 +1,38 @@
-import type { Trip } from "./types";
+import type { Trip, TripStop } from "./types";
 import { TRIP_COLORS } from "./constants";
+
+/**
+ * Get the active stop for a multi-destination trip on a given date.
+ * Returns null for single-destination trips.
+ * If a date falls on a transition day, returns the LATER stop (arrival).
+ */
+export function getActiveStop(trip: Trip, dateKey: string): TripStop | null {
+  if (trip.tripType !== "multi" || !trip.stops || !Array.isArray(trip.stops)) return null;
+  // Filter stops that contain this date, return the one with the latest startDate
+  // (so transition days show the city you've just arrived in)
+  const valid = trip.stops.filter(
+    (s) => typeof s === "object" && s.city && s.startDate <= dateKey && s.endDate >= dateKey
+  );
+  if (valid.length === 0) return null;
+  return valid.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+}
+
+/**
+ * Get all stops for a multi-destination trip that overlap a given month.
+ */
+export function getStopsForMonth(
+  trip: Trip,
+  year: number,
+  month: number
+): TripStop[] {
+  if (trip.tripType !== "multi" || !trip.stops) return [];
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const monthEnd = `${year}-${String(month + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
+  return trip.stops.filter(
+    (s) => typeof s === "object" && s.city && s.startDate <= monthEnd && s.endDate >= monthStart
+  );
+}
 
 export interface WeekRow {
   /** 1-based day numbers in this week row */

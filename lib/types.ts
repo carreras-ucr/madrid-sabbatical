@@ -24,6 +24,12 @@ export interface TripItem {
   attachments?: { url: string; filename: string; uploadedAt: string }[];
 }
 
+export interface TripStop {
+  city: string;
+  startDate: string;
+  endDate: string;
+}
+
 export interface Trip {
   id: string;
   destination: string;
@@ -33,7 +39,7 @@ export interface Trip {
   color: number;
   items: TripItem[];
   tripType?: "single" | "multi";
-  stops?: string[];
+  stops?: TripStop[];
 }
 
 export interface Visit {

@@ -3,7 +3,7 @@
 import { WEEKDAYS, TRIP_COLORS } from "@/lib/constants";
 import { SCHOOL_EVENTS } from "@/lib/schoolEvents";
 import type { Trip, Visit } from "@/lib/types";
-import { getTripsForMonth } from "@/lib/tripLayout";
+import { getTripsForMonth, getActiveStop } from "@/lib/tripLayout";
 import MonthTripSummary from "./MonthTripSummary";
 
 interface CalendarMonthProps {
@@ -150,7 +150,7 @@ export default function CalendarMonth({
                   color: TRIP_COLORS[t.color % TRIP_COLORS.length],
                 }}
               >
-                📍{t.destination.slice(0, 10)}
+                📍{(getActiveStop(t, k)?.city ?? t.destination).slice(0, 10)}
               </div>
             ))}
             {dv.slice(0, 2).map((v, i) => (
@@ -194,6 +194,8 @@ export default function CalendarMonth({
       <MonthTripSummary
         trips={monthTrips}
         visits={monthVisits}
+        year={year}
+        month={month}
         defaultExpanded={calendarMode === "trips"}
         onTripClick={onTripClick}
         onVisitClick={onVisitClick}
