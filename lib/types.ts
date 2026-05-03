@@ -1,7 +1,7 @@
 export interface TripItem {
   id: string;
   type: "flight" | "train" | "hotel" | "other";
-  direction?: "outbound" | "return";
+  direction?: "outbound" | "continuing" | "return";
   date: string;
   dateEnd?: string;
   refNumber: string;
@@ -32,6 +32,8 @@ export interface Trip {
   notes: string;
   color: number;
   items: TripItem[];
+  tripType?: "single" | "multi";
+  stops?: string[];
 }
 
 export interface Visit {

@@ -25,6 +25,8 @@ interface TripFormData {
   endDate: string;
   notes: string;
   color: number;
+  tripType: "single" | "multi";
+  stops: string[];
 }
 
 interface ItemFormData {
@@ -33,7 +35,7 @@ interface ItemFormData {
   dateEnd: string;
   details: string;
   refNumber: string;
-  direction: "outbound" | "return";
+  direction: "outbound" | "continuing" | "return";
   airline: string;
   hotelName: string;
   checkInTime: string;
@@ -69,6 +71,8 @@ export default function SabbaticalCalendar() {
     endDate: "",
     notes: "",
     color: 0,
+    tripType: "single",
+    stops: [""],
   });
   const [detailTripId, setDetailTripId] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
@@ -180,17 +184,42 @@ export default function SabbaticalCalendar() {
   });
 
   const saveTrip = () => {
-    if (!tripForm.destination || !tripForm.startDate || !tripForm.endDate) return;
+    // Build the payload based on tripType
+    let payload: Omit<Trip, "id" | "items">;
+    if (tripForm.tripType === "multi") {
+      const cleanStops = tripForm.stops.map((s) => s.trim()).filter((s) => s.length > 0);
+      if (cleanStops.length < 2 || !tripForm.startDate || !tripForm.endDate) return;
+      payload = {
+        destination: cleanStops.join("/"),
+        startDate: tripForm.startDate,
+        endDate: tripForm.endDate,
+        notes: tripForm.notes,
+        color: tripForm.color,
+        tripType: "multi",
+        stops: cleanStops,
+      };
+    } else {
+      if (!tripForm.destination || !tripForm.startDate || !tripForm.endDate) return;
+      payload = {
+        destination: tripForm.destination,
+        startDate: tripForm.startDate,
+        endDate: tripForm.endDate,
+        notes: tripForm.notes,
+        color: tripForm.color,
+        tripType: "single",
+      };
+    }
+
     let newId: string;
     let newTrips: Trip[];
     if (editTripId) {
       newId = editTripId;
       newTrips = trips.map((t) =>
-        t.id === editTripId ? { ...t, ...tripForm } : t
+        t.id === editTripId ? { ...t, ...payload, stops: payload.stops } : t
       );
     } else {
       newId = gid();
-      newTrips = [...trips, { ...tripForm, id: newId, items: [] }];
+      newTrips = [...trips, { ...payload, id: newId, items: [] }];
     }
     saveTrips(newTrips);
     setShowTripForm(false);
@@ -201,6 +230,8 @@ export default function SabbaticalCalendar() {
       endDate: "",
       notes: "",
       color: newTrips.length % TRIP_COLORS.length,
+      tripType: "single",
+      stops: [""],
     });
     setDetailTripId(newId);
     setView("tripDetail");
@@ -217,12 +248,15 @@ export default function SabbaticalCalendar() {
   };
 
   const openEditTrip = (trip: Trip) => {
+    const isMulti = trip.tripType === "multi";
     setTripForm({
-      destination: trip.destination,
+      destination: isMulti ? "" : trip.destination,
       startDate: trip.startDate,
       endDate: trip.endDate,
       notes: trip.notes || "",
       color: trip.color,
+      tripType: isMulti ? "multi" : "single",
+      stops: isMulti && trip.stops ? trip.stops : [""],
     });
     setEditTripId(trip.id);
     setShowTripForm(true);
@@ -678,7 +712,7 @@ export default function SabbaticalCalendar() {
       return <p className="text-gray-400 p-5">Trip not found.</p>;
     const c = TRIP_COLORS[detailTrip.color % TRIP_COLORS.length];
     const items = [...(detailTrip.items || [])].sort((a, b) => {
-      const dirOrd: Record<string, number> = { outbound: 0, return: 1 };
+      const dirOrd: Record<string, number> = { outbound: 0, continuing: 1, return: 2 };
       if (a.type === b.type) {
         const da = a.direction ? dirOrd[a.direction] : 0;
         const db = b.direction ? dirOrd[b.direction] : 0;
@@ -707,7 +741,9 @@ export default function SabbaticalCalendar() {
                 className="text-xl font-extrabold"
                 style={{ color: c }}
               >
-                📍 {detailTrip.destination}
+                📍 {detailTrip.tripType === "multi" && detailTrip.stops
+                  ? `Madrid → ${detailTrip.stops.join(" → ")} → Madrid`
+                  : detailTrip.destination}
               </h2>
               <div className="text-[13px] text-gray-500 mt-1">
                 {fmtDate(detailTrip.startDate)} – {fmtDate(detailTrip.endDate)}
@@ -800,10 +836,16 @@ export default function SabbaticalCalendar() {
                             className={`text-[10px] font-bold px-1.5 py-0.5 rounded mr-1.5 ${
                               item.direction === "return"
                                 ? "text-purple-600 bg-purple-50"
+                                : item.direction === "continuing"
+                                ? "text-amber-700 bg-amber-50"
                                 : "text-blue-600 bg-blue-100"
                             }`}
                           >
-                            {item.direction === "return" ? "↩ Return" : "→ Outbound"}
+                            {item.direction === "return"
+                              ? "↩ Return"
+                              : item.direction === "continuing"
+                              ? "↻ Continuing"
+                              : "→ Outbound"}
                           </span>
                         )}
 
@@ -980,6 +1022,8 @@ export default function SabbaticalCalendar() {
                 endDate: "",
                 notes: "",
                 color: trips.length % TRIP_COLORS.length,
+                tripType: "single" as const,
+                stops: [""],
               });
               setEditTripId(null);
               setShowTripForm(true);
@@ -1133,19 +1177,114 @@ export default function SabbaticalCalendar() {
               {editTripId ? "Edit" : "New"} Trip
             </h3>
             <div className="flex flex-col gap-2.5">
+              {/* Trip type toggle */}
               <div>
                 <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
-                  Destination *
+                  Trip Type
                 </label>
-                <input
-                  value={tripForm.destination}
-                  onChange={(e) =>
-                    setTripForm((f) => ({ ...f, destination: e.target.value }))
-                  }
-                  placeholder="e.g. Porto, Lisbon, Paris…"
-                  className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
-                />
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() =>
+                      setTripForm((f) => ({
+                        ...f,
+                        tripType: "single",
+                        stops: f.stops.length ? f.stops : [""],
+                      }))
+                    }
+                    className={`flex-1 py-1.5 rounded-md text-[12px] font-semibold cursor-pointer ${
+                      tripForm.tripType === "single"
+                        ? "border-2 border-indigo-600 bg-indigo-50 text-indigo-700"
+                        : "border border-gray-300 bg-white text-slate-600"
+                    }`}
+                  >
+                    Single destination
+                  </button>
+                  <button
+                    onClick={() =>
+                      setTripForm((f) => ({
+                        ...f,
+                        tripType: "multi",
+                        stops: f.stops.length >= 2 ? f.stops : ["", ""],
+                      }))
+                    }
+                    className={`flex-1 py-1.5 rounded-md text-[12px] font-semibold cursor-pointer ${
+                      tripForm.tripType === "multi"
+                        ? "border-2 border-indigo-600 bg-indigo-50 text-indigo-700"
+                        : "border border-gray-300 bg-white text-slate-600"
+                    }`}
+                  >
+                    Multiple destinations
+                  </button>
+                </div>
               </div>
+
+              {/* Single destination input */}
+              {tripForm.tripType === "single" && (
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                    Destination *
+                  </label>
+                  <input
+                    value={tripForm.destination}
+                    onChange={(e) =>
+                      setTripForm((f) => ({ ...f, destination: e.target.value }))
+                    }
+                    placeholder="e.g. Porto, Lisbon, Paris…"
+                    className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                  />
+                </div>
+              )}
+
+              {/* Multi-destination stops list */}
+              {tripForm.tripType === "multi" && (
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                    Stops * <span className="text-gray-400 font-normal">(in order)</span>
+                  </label>
+                  <div className="text-[10px] text-gray-500 mb-1.5">
+                    Madrid → {tripForm.stops.filter((s) => s.trim()).join(" → ") || "..."} → Madrid
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {tripForm.stops.map((stop, i) => (
+                      <div key={i} className="flex gap-1.5 items-center">
+                        <span className="text-[11px] text-gray-400 w-12 shrink-0">Stop {i + 1}</span>
+                        <input
+                          value={stop}
+                          onChange={(e) =>
+                            setTripForm((f) => ({
+                              ...f,
+                              stops: f.stops.map((s, idx) => (idx === i ? e.target.value : s)),
+                            }))
+                          }
+                          placeholder="e.g. Istanbul"
+                          className="flex-1 px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                        />
+                        {tripForm.stops.length > 2 && (
+                          <button
+                            onClick={() =>
+                              setTripForm((f) => ({
+                                ...f,
+                                stops: f.stops.filter((_, idx) => idx !== i),
+                              }))
+                            }
+                            className="bg-transparent border-none cursor-pointer text-sm p-0.5 text-slate-400"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() =>
+                      setTripForm((f) => ({ ...f, stops: [...f.stops, ""] }))
+                    }
+                    className="mt-1.5 text-[11px] font-semibold text-indigo-600 bg-transparent border-none cursor-pointer hover:underline"
+                  >
+                    + Add Stop
+                  </button>
+                </div>
+              )}
               <div className="flex gap-2">
                 <div className="flex-1">
                   <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
@@ -1285,7 +1424,7 @@ export default function SabbaticalCalendar() {
                       onClick={() =>
                         setItemForm((f) => ({ ...f, direction: "outbound" }))
                       }
-                      className={`flex-1 py-2 rounded-md text-[13px] font-semibold cursor-pointer text-center ${
+                      className={`flex-1 py-2 rounded-md text-[12px] font-semibold cursor-pointer text-center ${
                         itemForm.direction === "outbound"
                           ? "border-2 border-blue-600 bg-blue-100 text-blue-600"
                           : "border border-gray-300 bg-white text-slate-600"
@@ -1293,11 +1432,25 @@ export default function SabbaticalCalendar() {
                     >
                       → Outbound
                     </button>
+                    {detailTrip?.tripType === "multi" && (
+                      <button
+                        onClick={() =>
+                          setItemForm((f) => ({ ...f, direction: "continuing" }))
+                        }
+                        className={`flex-1 py-2 rounded-md text-[12px] font-semibold cursor-pointer text-center ${
+                          itemForm.direction === "continuing"
+                            ? "border-2 border-amber-600 bg-amber-50 text-amber-700"
+                            : "border border-gray-300 bg-white text-slate-600"
+                        }`}
+                      >
+                        ↻ Continuing
+                      </button>
+                    )}
                     <button
                       onClick={() =>
                         setItemForm((f) => ({ ...f, direction: "return" }))
                       }
-                      className={`flex-1 py-2 rounded-md text-[13px] font-semibold cursor-pointer text-center ${
+                      className={`flex-1 py-2 rounded-md text-[12px] font-semibold cursor-pointer text-center ${
                         itemForm.direction === "return"
                           ? "border-2 border-purple-600 bg-purple-50 text-purple-600"
                           : "border border-gray-300 bg-white text-slate-600"
