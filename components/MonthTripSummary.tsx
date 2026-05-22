@@ -47,6 +47,13 @@ export default function MonthTripSummary({
           endDate: stop.endDate,
         });
       }
+    } else if (trip.tripType === "oneway" && trip.origin) {
+      rows.push({
+        trip,
+        label: `${trip.origin} → ${trip.destination}`,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+      });
     } else {
       rows.push({
         trip,

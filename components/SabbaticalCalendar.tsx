@@ -26,8 +26,9 @@ interface TripFormData {
   endDate: string;
   notes: string;
   color: number;
-  tripType: "single" | "multi";
+  tripType: "single" | "multi" | "oneway";
   stops: TripStop[];
+  origin: string;
 }
 
 interface ItemFormData {
@@ -74,6 +75,7 @@ export default function SabbaticalCalendar() {
     color: 0,
     tripType: "single",
     stops: [{ city: "", startDate: "", endDate: "" }],
+    origin: "",
   });
   const [detailTripId, setDetailTripId] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
@@ -207,6 +209,19 @@ export default function SabbaticalCalendar() {
         tripType: "multi",
         stops: cleanStops,
       };
+    } else if (tripForm.tripType === "oneway") {
+      const origin = tripForm.origin.trim();
+      const destination = tripForm.destination.trim();
+      if (!origin || !destination || !tripForm.startDate) return;
+      payload = {
+        destination,
+        startDate: tripForm.startDate,
+        endDate: tripForm.startDate,
+        notes: tripForm.notes,
+        color: tripForm.color,
+        tripType: "oneway",
+        origin,
+      };
     } else {
       if (!tripForm.destination || !tripForm.startDate || !tripForm.endDate) return;
       payload = {
@@ -225,9 +240,10 @@ export default function SabbaticalCalendar() {
       newId = editTripId;
       newTrips = trips.map((t) => {
         if (t.id !== editTripId) return t;
-        // Clear stops if switching to single
+        // Clear fields that don't apply to the new type
         const { ...rest } = t;
-        if (payload.tripType === "single") delete rest.stops;
+        if (payload.tripType !== "multi") delete rest.stops;
+        if (payload.tripType !== "oneway") delete rest.origin;
         return { ...rest, ...payload };
       });
     } else {
@@ -245,6 +261,7 @@ export default function SabbaticalCalendar() {
       color: newTrips.length % TRIP_COLORS.length,
       tripType: "single",
       stops: [{ city: "", startDate: "", endDate: "" }],
+      origin: "",
     });
     setDetailTripId(newId);
     setView("tripDetail");
@@ -268,16 +285,18 @@ export default function SabbaticalCalendar() {
       trip.stops.length > 0 &&
       typeof trip.stops[0] === "object" &&
       (trip.stops[0] as TripStop).city !== undefined;
+    const isOneway = trip.tripType === "oneway";
     setTripForm({
       destination: isMulti ? "" : trip.destination,
       startDate: trip.startDate,
       endDate: trip.endDate,
       notes: trip.notes || "",
       color: trip.color,
-      tripType: isMulti ? "multi" : "single",
+      tripType: isMulti ? "multi" : isOneway ? "oneway" : "single",
       stops: isMulti
         ? (trip.stops as TripStop[])
         : [{ city: "", startDate: "", endDate: "" }],
+      origin: trip.origin || "",
     });
     setEditTripId(trip.id);
     setShowTripForm(true);
@@ -703,10 +722,14 @@ export default function SabbaticalCalendar() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm text-slate-800">
-                    📍 {trip.destination}
+                    📍 {trip.tripType === "oneway" && trip.origin
+                      ? `${trip.origin} → ${trip.destination}`
+                      : trip.destination}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {fmtDate(trip.startDate)} – {fmtDate(trip.endDate)}
+                    {trip.tripType === "oneway" || trip.startDate === trip.endDate
+                      ? fmtDate(trip.startDate)
+                      : `${fmtDate(trip.startDate)} – ${fmtDate(trip.endDate)}`}
                   </div>
                 </div>
                 <div className="text-right shrink-0">
@@ -771,10 +794,14 @@ export default function SabbaticalCalendar() {
                   ? `Madrid → ${(detailTrip.stops as TripStop[])
                       .map((s) => `${s.city} (${fmtDate(s.startDate)}–${fmtDate(s.endDate)})`)
                       .join(" → ")} → Madrid`
+                  : detailTrip.tripType === "oneway" && detailTrip.origin
+                  ? `${detailTrip.origin} → ${detailTrip.destination}`
                   : detailTrip.destination}
               </h2>
               <div className="text-[13px] text-gray-500 mt-1">
-                {fmtDate(detailTrip.startDate)} – {fmtDate(detailTrip.endDate)}
+                {detailTrip.tripType === "oneway" || detailTrip.startDate === detailTrip.endDate
+                  ? fmtDate(detailTrip.startDate)
+                  : `${fmtDate(detailTrip.startDate)} – ${fmtDate(detailTrip.endDate)}`}
               </div>
               {detailTrip.notes && (
                 <div className="text-xs text-gray-500 mt-1 italic">
@@ -1052,6 +1079,7 @@ export default function SabbaticalCalendar() {
                 color: trips.length % TRIP_COLORS.length,
                 tripType: "single" as const,
                 stops: [{ city: "", startDate: "", endDate: "" }],
+                origin: "",
               });
               setEditTripId(null);
               setShowTripForm(true);
@@ -1245,6 +1273,23 @@ export default function SabbaticalCalendar() {
                   >
                     Multiple destinations
                   </button>
+                  <button
+                    onClick={() =>
+                      setTripForm((f) => ({
+                        ...f,
+                        tripType: "oneway",
+                        origin: f.origin || "",
+                        destination: f.destination || "Madrid",
+                      }))
+                    }
+                    className={`flex-1 py-1.5 rounded-md text-[12px] font-semibold cursor-pointer ${
+                      tripForm.tripType === "oneway"
+                        ? "border-2 border-indigo-600 bg-indigo-50 text-indigo-700"
+                        : "border border-gray-300 bg-white text-slate-600"
+                    }`}
+                  >
+                    One-way
+                  </button>
                 </div>
               </div>
 
@@ -1370,6 +1415,61 @@ export default function SabbaticalCalendar() {
                     + Add Stop
                   </button>
                 </div>
+              )}
+
+              {/* One-way: origin, destination, single travel date */}
+              {tripForm.tripType === "oneway" && (
+                <>
+                  <div className="text-[10px] text-gray-500 leading-relaxed">
+                    {tripForm.origin || "..."} → {tripForm.destination || "..."}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                        From *
+                      </label>
+                      <input
+                        value={tripForm.origin}
+                        onChange={(e) =>
+                          setTripForm((f) => ({ ...f, origin: e.target.value }))
+                        }
+                        placeholder="e.g. LAX"
+                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                        To *
+                      </label>
+                      <input
+                        value={tripForm.destination}
+                        onChange={(e) =>
+                          setTripForm((f) => ({ ...f, destination: e.target.value }))
+                        }
+                        placeholder="e.g. Madrid"
+                        className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={tripForm.startDate}
+                      min="2026-08-01"
+                      onChange={(e) =>
+                        setTripForm((f) => ({
+                          ...f,
+                          startDate: e.target.value,
+                          endDate: e.target.value,
+                        }))
+                      }
+                      className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]"
+                    />
+                  </div>
+                </>
               )}
 
               {/* Global dates only in single mode */}

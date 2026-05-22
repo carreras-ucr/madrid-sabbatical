@@ -38,8 +38,9 @@ export interface Trip {
   notes: string;
   color: number;
   items: TripItem[];
-  tripType?: "single" | "multi";
+  tripType?: "single" | "multi" | "oneway";
   stops?: TripStop[];
+  origin?: string;
 }
 
 export interface Visit {
