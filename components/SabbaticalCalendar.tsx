@@ -1242,13 +1242,12 @@ export default function SabbaticalCalendar() {
               </a>
             </div>
           </div>
-          <div className="rounded-xl overflow-hidden border border-slate-200 bg-[#fbf5e4]">
+          <div className="rounded-xl overflow-hidden border border-[#ebdfb8] bg-[#ede0bb]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/sabbatical-map.png"
               alt="Sabbatical Adventure Map"
               className="w-full h-auto block"
-              style={{ filter: "brightness(1.06) saturate(1.02)" }}
             />
           </div>
         </div>
