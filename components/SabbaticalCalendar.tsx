@@ -60,7 +60,7 @@ interface VisitFormData {
   color: number;
 }
 
-type ViewType = "calendar" | "trips" | "tripDetail" | "visits" | "visitDetail";
+type ViewType = "calendar" | "trips" | "tripDetail" | "visits" | "visitDetail" | "map";
 
 export default function SabbaticalCalendar() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -1113,6 +1113,7 @@ export default function SabbaticalCalendar() {
           [
             ["calendar", "📅 Calendar"],
             ["trips", `📋 Trips (${trips.length})`],
+            ["map", "🗺️ Map"],
             ["visits", `👋 Visits (${visits.length})`],
           ] as const
         ).map(([k, label]) => (
@@ -1216,6 +1217,34 @@ export default function SabbaticalCalendar() {
       {view === "tripDetail" && renderTripDetail()}
       {view === "visits" && renderVisitsList()}
       {view === "visitDetail" && renderVisitDetail()}
+      {view === "map" && (
+        <div>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="text-lg font-bold text-slate-800">
+              🗺️ Our Big Sabbatical Adventure
+            </h2>
+            <a
+              href="/sabbatical-map.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[12px] font-semibold text-indigo-600 hover:underline"
+            >
+              📥 Open in new tab
+            </a>
+          </div>
+          <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+            <iframe
+              src="/sabbatical-map.pdf#view=FitH"
+              title="Sabbatical Adventure Map"
+              className="w-full block"
+              style={{ height: "80vh", minHeight: 500, border: "none" }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500 text-center">
+            If the map doesn&apos;t display on mobile, tap &quot;Open in new tab&quot; above.
+          </p>
+        </div>
+      )}
 
       {/* Trip Form Modal */}
       {showTripForm && (
