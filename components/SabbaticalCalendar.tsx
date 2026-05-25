@@ -1242,7 +1242,7 @@ export default function SabbaticalCalendar() {
               </a>
             </div>
           </div>
-          <div className="rounded-xl overflow-hidden border border-slate-200 bg-[#f5ecd9]">
+          <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/sabbatical-map.png"
@@ -2007,13 +2007,15 @@ export default function SabbaticalCalendar() {
           );
         })()}
 
-      {/* Footer Note */}
+      {/* Footer Note (hidden on Map view) */}
+      {view !== "map" && (
       <div className="mt-4 p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-800">
         ⚠️ <strong>Note:</strong> School dates from the official{" "}
         <em>Orden de la Consejera de Educación</em> (2026/2027). Infantil 2º
         ciclo + Primaria = Section 2.2.2. 2027 national/community/local holidays
         will be added once published.
       </div>
+      )}
     </div>
   );
 }
