@@ -1223,26 +1223,33 @@ export default function SabbaticalCalendar() {
             <h2 className="text-lg font-bold text-slate-800">
               🗺️ Our Big Sabbatical Adventure
             </h2>
-            <a
-              href="/sabbatical-map.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[12px] font-semibold text-indigo-600 hover:underline"
-            >
-              📥 Open in new tab
-            </a>
+            <div className="flex gap-3 text-[12px] font-semibold">
+              <a
+                href="/sabbatical-map.png"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-600 hover:underline"
+              >
+                🖼️ Open image
+              </a>
+              <a
+                href="/sabbatical-map.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-600 hover:underline"
+              >
+                📥 PDF
+              </a>
+            </div>
           </div>
-          <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-            <iframe
-              src="/sabbatical-map.pdf#view=FitH"
-              title="Sabbatical Adventure Map"
-              className="w-full block"
-              style={{ height: "80vh", minHeight: 500, border: "none" }}
+          <div className="rounded-xl overflow-hidden border border-slate-200 bg-[#f5ecd9]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/sabbatical-map.png"
+              alt="Sabbatical Adventure Map"
+              className="w-full h-auto block"
             />
           </div>
-          <p className="mt-2 text-[11px] text-slate-500 text-center">
-            If the map doesn&apos;t display on mobile, tap &quot;Open in new tab&quot; above.
-          </p>
         </div>
       )}
 
