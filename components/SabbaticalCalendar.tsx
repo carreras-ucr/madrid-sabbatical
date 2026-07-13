@@ -29,6 +29,7 @@ interface TripFormData {
   tripType: "single" | "multi" | "oneway";
   stops: TripStop[];
   origin: string;
+  endsAt: string;
 }
 
 interface ItemFormData {
@@ -76,6 +77,7 @@ export default function SabbaticalCalendar() {
     tripType: "single",
     stops: [{ city: "", startDate: "", endDate: "" }],
     origin: "",
+    endsAt: "",
   });
   const [detailTripId, setDetailTripId] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
@@ -200,6 +202,7 @@ export default function SabbaticalCalendar() {
       // Auto-derive trip dates from stops
       const allStarts = cleanStops.map((s) => s.startDate).sort();
       const allEnds = cleanStops.map((s) => s.endDate).sort();
+      const endsAt = tripForm.endsAt.trim();
       payload = {
         destination: cleanStops.map((s) => s.city).join("/"),
         startDate: allStarts[0],
@@ -208,6 +211,7 @@ export default function SabbaticalCalendar() {
         color: tripForm.color,
         tripType: "multi",
         stops: cleanStops,
+        ...(endsAt ? { endsAt } : {}),
       };
     } else if (tripForm.tripType === "oneway") {
       const origin = tripForm.origin.trim();
@@ -242,7 +246,10 @@ export default function SabbaticalCalendar() {
         if (t.id !== editTripId) return t;
         // Clear fields that don't apply to the new type
         const { ...rest } = t;
-        if (payload.tripType !== "multi") delete rest.stops;
+        if (payload.tripType !== "multi") {
+          delete rest.stops;
+          delete rest.endsAt;
+        }
         if (payload.tripType !== "oneway") delete rest.origin;
         return { ...rest, ...payload };
       });
@@ -262,6 +269,7 @@ export default function SabbaticalCalendar() {
       tripType: "single",
       stops: [{ city: "", startDate: "", endDate: "" }],
       origin: "",
+      endsAt: "",
     });
     setDetailTripId(newId);
     setView("tripDetail");
@@ -297,6 +305,7 @@ export default function SabbaticalCalendar() {
         ? (trip.stops as TripStop[])
         : [{ city: "", startDate: "", endDate: "" }],
       origin: trip.origin || "",
+      endsAt: trip.endsAt || "",
     });
     setEditTripId(trip.id);
     setShowTripForm(true);
@@ -793,7 +802,7 @@ export default function SabbaticalCalendar() {
                 📍 {detailTrip.tripType === "multi" && detailTrip.stops && detailTrip.stops.length > 0 && typeof detailTrip.stops[0] === "object"
                   ? `Madrid → ${(detailTrip.stops as TripStop[])
                       .map((s) => `${s.city} (${fmtDate(s.startDate)}–${fmtDate(s.endDate)})`)
-                      .join(" → ")} → Madrid`
+                      .join(" → ")} → ${detailTrip.endsAt?.trim() || "Madrid"}`
                   : detailTrip.tripType === "oneway" && detailTrip.origin
                   ? `${detailTrip.origin} → ${detailTrip.destination}`
                   : detailTrip.destination}
@@ -1080,6 +1089,7 @@ export default function SabbaticalCalendar() {
                 tripType: "single" as const,
                 stops: [{ city: "", startDate: "", endDate: "" }],
                 origin: "",
+      endsAt: "",
               });
               setEditTripId(null);
               setShowTripForm(true);
@@ -1356,7 +1366,7 @@ export default function SabbaticalCalendar() {
                     Madrid → {tripForm.stops
                       .filter((s) => s.city.trim())
                       .map((s) => `${s.city}${s.startDate && s.endDate ? ` (${fmtDate(s.startDate)}–${fmtDate(s.endDate)})` : ""}`)
-                      .join(" → ") || "..."} → Madrid
+                      .join(" → ") || "..."} → {tripForm.endsAt.trim() || "Madrid"}
                   </div>
                   <div className="flex flex-col gap-2.5">
                     {tripForm.stops.map((stop, i) => (
@@ -1450,6 +1460,21 @@ export default function SabbaticalCalendar() {
                   >
                     + Add Stop
                   </button>
+
+                  {/* Optional final destination (defaults to Madrid) */}
+                  <div className="mt-3">
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                      Ends at <span className="text-gray-400 font-normal">(leave blank to return to Madrid)</span>
+                    </label>
+                    <input
+                      value={tripForm.endsAt}
+                      onChange={(e) =>
+                        setTripForm((f) => ({ ...f, endsAt: e.target.value }))
+                      }
+                      placeholder="e.g. Los Angeles"
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 text-[13px]"
+                    />
+                  </div>
                 </div>
               )}
 

@@ -41,6 +41,7 @@ export interface Trip {
   tripType?: "single" | "multi" | "oneway";
   stops?: TripStop[];
   origin?: string;
+  endsAt?: string;
 }
 
 export interface Visit {
