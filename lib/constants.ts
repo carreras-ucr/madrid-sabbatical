@@ -11,6 +11,7 @@ export const MONTHS = [
   { year: 2027, month: 4, label: "May 2027" },
   { year: 2027, month: 5, label: "June 2027" },
   { year: 2027, month: 6, label: "July 2027" },
+  { year: 2027, month: 7, label: "August 2027" },
 ];
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
