@@ -16,6 +16,10 @@ export interface TripItem {
   departureTime?: string;
   arrivalTime?: string;
   bookedWith?: string;
+  // Train fields
+  trainNumber?: string;
+  departingStation?: string;
+  arrivingStation?: string;
   ticketMiguel?: string;
   ticketYasemin?: string;
   ticketLara?: string;

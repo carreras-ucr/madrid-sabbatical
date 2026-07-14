@@ -51,6 +51,9 @@ interface ItemFormData {
   ticketYasemin: string;
   ticketLara: string;
   ticketMateo: string;
+  trainNumber: string;
+  departingStation: string;
+  arrivingStation: string;
 }
 
 interface VisitFormData {
@@ -101,6 +104,9 @@ export default function SabbaticalCalendar() {
     ticketYasemin: "",
     ticketLara: "",
     ticketMateo: "",
+    trainNumber: "",
+    departingStation: "",
+    arrivingStation: "",
   });
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -345,6 +351,9 @@ export default function SabbaticalCalendar() {
       ticketYasemin: "",
       ticketLara: "",
       ticketMateo: "",
+      trainNumber: "",
+      departingStation: "",
+      arrivingStation: "",
     });
     setShowItemForm(false);
     setEditItemId(null);
@@ -379,6 +388,9 @@ export default function SabbaticalCalendar() {
       ticketYasemin: item.ticketYasemin || "",
       ticketLara: item.ticketLara || "",
       ticketMateo: item.ticketMateo || "",
+      trainNumber: item.trainNumber || "",
+      departingStation: item.departingStation || "",
+      arrivingStation: item.arrivingStation || "",
     });
     setEditItemId(item.id);
     setShowItemForm(true);
@@ -860,6 +872,9 @@ export default function SabbaticalCalendar() {
                     ticketYasemin: "",
                     ticketLara: "",
                     ticketMateo: "",
+                    trainNumber: "",
+                    departingStation: "",
+                    arrivingStation: "",
                   });
                   setEditItemId(null);
                   setShowItemForm(true);
@@ -981,8 +996,46 @@ export default function SabbaticalCalendar() {
                           </>
                         )}
 
-                        {/* TRAIN / OTHER display */}
-                        {(item.type === "train" || item.type === "other") && (
+                        {/* TRAIN display */}
+                        {item.type === "train" && (
+                          <>
+                            {/* Line 1: Train # and route */}
+                            <span>
+                              {item.trainNumber && <strong className="text-slate-800 mr-1.5">{item.trainNumber}</strong>}
+                              {(item.departingStation || item.arrivingStation) && (
+                                <span className="text-gray-700">
+                                  {item.departingStation}
+                                  {item.departingStation && item.arrivingStation && <span className="mx-1">→</span>}
+                                  {item.arrivingStation}
+                                </span>
+                              )}
+                            </span>
+                            {/* Line 2: Date and times */}
+                            {(item.date || item.departureTime || item.arrivalTime) && (
+                              <div className="mt-1 text-[12px]">
+                                {item.date && <span className="text-slate-700 font-semibold mr-2">📅 {fmtDate(item.date)}</span>}
+                                {(item.departureTime || item.arrivalTime) && (
+                                  <span className="text-slate-600">
+                                    🕐 {item.departureTime && <span className="font-medium">{item.departureTime}</span>}
+                                    {item.departureTime && item.arrivalTime && <span className="mx-1">→</span>}
+                                    {item.arrivalTime && <span className="font-medium">{item.arrivalTime}</span>}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {/* Line 3: Booking ref and details */}
+                            {(item.refNumber || item.details) && (
+                              <div className="mt-0.5 text-[11px]">
+                                {item.refNumber && <span className="text-slate-500 mr-2">Ref: <span className="font-medium text-slate-600">{item.refNumber}</span></span>}
+                                {item.details && <span className="text-gray-700">{item.details}</span>}
+                              </div>
+                            )}
+                            {!item.trainNumber && !item.refNumber && !item.details && !item.departingStation && !item.arrivingStation && <span className="text-gray-400">No details</span>}
+                          </>
+                        )}
+
+                        {/* OTHER display */}
+                        {item.type === "other" && (
                           <>
                             {item.refNumber && <strong className="mr-1.5">{item.refNumber}</strong>}
                             {item.details && <span className="text-gray-700">{item.details}</span>}
@@ -1811,8 +1864,52 @@ export default function SabbaticalCalendar() {
                 </>
               )}
 
-              {/* === TRAIN / OTHER FIELDS === */}
-              {(itemForm.type === "train" || itemForm.type === "other") && (
+              {/* === TRAIN FIELDS === */}
+              {itemForm.type === "train" && (
+                <>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Date</label>
+                    <input type="date" value={itemForm.date} onChange={(e) => setItemForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Train #</label>
+                      <input value={itemForm.trainNumber} onChange={(e) => setItemForm((f) => ({ ...f, trainNumber: e.target.value }))} placeholder="e.g. AVE 02345" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Booking Ref</label>
+                      <input value={itemForm.refNumber} onChange={(e) => setItemForm((f) => ({ ...f, refNumber: e.target.value }))} placeholder="e.g. BKNG-7890" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Departing Station</label>
+                      <input value={itemForm.departingStation} onChange={(e) => setItemForm((f) => ({ ...f, departingStation: e.target.value }))} placeholder="e.g. Madrid Atocha" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Arriving Station</label>
+                      <input value={itemForm.arrivingStation} onChange={(e) => setItemForm((f) => ({ ...f, arrivingStation: e.target.value }))} placeholder="e.g. Barcelona Sants" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Departure Time</label>
+                      <input type="time" value={itemForm.departureTime} onChange={(e) => setItemForm((f) => ({ ...f, departureTime: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Arrival Time</label>
+                      <input type="time" value={itemForm.arrivalTime} onChange={(e) => setItemForm((f) => ({ ...f, arrivalTime: e.target.value }))} className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Details</label>
+                    <input value={itemForm.details} onChange={(e) => setItemForm((f) => ({ ...f, details: e.target.value }))} placeholder="e.g. class, seat, notes" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                  </div>
+                </>
+              )}
+
+              {/* === OTHER FIELDS === */}
+              {itemForm.type === "other" && (
                 <>
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Date</label>
@@ -1820,11 +1917,11 @@ export default function SabbaticalCalendar() {
                   </div>
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Ref #</label>
-                    <input value={itemForm.refNumber} onChange={(e) => setItemForm((f) => ({ ...f, refNumber: e.target.value }))} placeholder="e.g. AVE 02345, booking code" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    <input value={itemForm.refNumber} onChange={(e) => setItemForm((f) => ({ ...f, refNumber: e.target.value }))} placeholder="e.g. booking code" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                   </div>
                   <div>
                     <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">Details</label>
-                    <input value={itemForm.details} onChange={(e) => setItemForm((f) => ({ ...f, details: e.target.value }))} placeholder="e.g. MAD→BCN dep 10:30" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
+                    <input value={itemForm.details} onChange={(e) => setItemForm((f) => ({ ...f, details: e.target.value }))} placeholder="e.g. description, contact" className="w-full px-2.5 py-2 rounded-md border border-slate-300 text-[13px]" />
                   </div>
                 </>
               )}
