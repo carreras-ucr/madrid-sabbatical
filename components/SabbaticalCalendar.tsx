@@ -168,26 +168,26 @@ export default function SabbaticalCalendar() {
     []
   );
 
-  // Build trips-by-date index
+  // Build trips-by-date index (timezone-safe: never converts through UTC)
   const tripsByDate: Record<string, Trip[]> = {};
   trips.forEach((trip) => {
-    const c = new Date(trip.startDate + "T00:00:00");
-    const e = new Date(trip.endDate + "T00:00:00");
+    const c = new Date(trip.startDate + "T12:00:00");
+    const e = new Date(trip.endDate + "T12:00:00");
     while (c <= e) {
-      const k = c.toISOString().slice(0, 10);
+      const k = dk(c.getFullYear(), c.getMonth(), c.getDate());
       if (!tripsByDate[k]) tripsByDate[k] = [];
       tripsByDate[k].push(trip);
       c.setDate(c.getDate() + 1);
     }
   });
 
-  // Build visits-by-date index
+  // Build visits-by-date index (timezone-safe: never converts through UTC)
   const visitsByDate: Record<string, Visit[]> = {};
   visits.forEach((visit) => {
-    const c = new Date(visit.startDate + "T00:00:00");
-    const e = new Date(visit.endDate + "T00:00:00");
+    const c = new Date(visit.startDate + "T12:00:00");
+    const e = new Date(visit.endDate + "T12:00:00");
     while (c <= e) {
-      const k = c.toISOString().slice(0, 10);
+      const k = dk(c.getFullYear(), c.getMonth(), c.getDate());
       if (!visitsByDate[k]) visitsByDate[k] = [];
       visitsByDate[k].push(visit);
       c.setDate(c.getDate() + 1);
